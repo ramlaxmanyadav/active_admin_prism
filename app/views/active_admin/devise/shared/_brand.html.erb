@@ -1,0 +1,34 @@
+<%#
+  Shared brand block for every Devise auth page Prism reskins (sign in,
+  sign up, forgot/reset password, resend confirmation, resend unlock) —
+  each action's own view renders this instead of duplicating the
+  logo/app-name/subtitle markup, so all of them redesign (or degrade back
+  to stock ActiveAdmin) together instead of drifting out of sync. Gated by
+  ActiveAdminPrism::Configuration#login_page, the same flag the
+  sign-in page itself uses (see lib/prism_login_helper.rb for the
+  logo/app-name resolution logic behind prism_login_logo_html/
+  prism_login_app_name).
+
+  Locals:
+    action_title - the page's own translated title (e.g. "Sign up",
+                   "Change your password") — the caller has already run
+                   it through `title(...)` for its @page_title side
+                   effect before passing it in here, so this partial
+                   never needs to call `title` itself.
+    subtitle     - what to show under the app name in branded mode.
+                   Every caller except sessions#new just passes
+                   action_title again; sessions#new passes
+                   config.login_tagline instead, since that one has its
+                   own dedicated, independently configurable copy.
+%>
+<% if ActiveAdminPrism.configuration.login_page %>
+  <div class="prism-login-brand">
+    <div class="prism-login-logo"><%= prism_login_logo_html %></div>
+    <h2 class="prism-login-title"><%= prism_login_app_name %></h2>
+    <% if subtitle.present? %>
+      <p class="prism-login-tagline"><%= subtitle %></p>
+    <% end %>
+  </div>
+<% else %>
+  <h2><%= active_admin_application.site_title(self) %> <%= action_title %></h2>
+<% end %>

@@ -1,0 +1,27 @@
+.prism-icon,
+.prism-nav-icon,
+.prism-chevron,
+.prism-action-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.prism-icon {
+  margin-right: 6px;
+}
+
+// Standard "visually hidden but present for assistive tech" utility —
+// used to keep the localized View/Edit/Delete label available to screen
+// readers once the visible text is replaced by an icon.
+.prism-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

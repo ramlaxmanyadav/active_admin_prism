@@ -1,0 +1,134 @@
+// Buttons: ActiveAdmin ships two visual weights (dark-button / light-button)
+// applied via deeply-nested, sometimes ID-scoped selectors
+// (e.g. "#title_bar .action_items span.action_item > a"). To reliably win
+// the cascade we mirror those exact selector paths here rather than relying
+// on a flat, lower-specificity override.
+//
+// prism-button-primary / prism-button-secondary are defined in
+// _variables.scss (loaded first) since _base.scss's flash/dialog styling
+// also needs them.
+
+// Generic buttons (form submits, plain `.button` links) — primary style.
+a.button,
+a:link.button,
+a:visited.button,
+input[type="submit"],
+input[type="button"],
+button,
+form input[type="submit"],
+form input[type="button"],
+form button {
+  @include prism-button-primary;
+}
+
+a.button.danger,
+input[type="submit"].danger,
+form input[type="submit"].danger {
+  background: $prism-color-danger;
+  border-color: $prism-color-danger;
+
+  &:hover {
+    background: darken($prism-color-danger, 8%);
+    border-color: darken($prism-color-danger, 8%);
+  }
+}
+
+// The page-level "New Resource" action button(s) in the title bar — same
+// selector path ActiveAdmin uses (it's ID-scoped, so a flatter selector
+// would lose the cascade regardless of load order).
+#title_bar .action_items span.action_item > a,
+#title_bar .action_items span.action_item > .dropdown_menu > a {
+  @include prism-button-primary;
+  padding: 9px 16px;
+  margin: 0;
+}
+
+// Secondary / lower-emphasis buttons: batch actions trigger, pagination,
+// "clear filters", "cancel" form link.
+.dropdown_menu .dropdown_menu_button,
+form.filter_form a.clear_filters_btn,
+fieldset.buttons li.cancel a,
+fieldset.actions li.cancel a,
+.pagination a,
+.pagination span.page.current,
+.pagination_per_page select {
+  @include prism-button-secondary;
+}
+
+.dropdown_menu .dropdown_menu_button {
+  padding-right: 26px !important;
+
+  &::before,
+  &::after {
+    border-color: $prism-text-muted transparent;
+  }
+}
+
+// The wrapper AA renders behind an opened dropdown (Batch Actions) list
+// defaults to a dark-gray gradient card ($primary-color); the list items
+// inside it default to AA's blue-gray "highlight-gradient" on :hover/:active.
+// Neither is touched by the button mixins above, so both need an explicit
+// reset here — this is almost certainly the "black/grey on hover" being
+// reported, not the buttons themselves.
+.dropdown_menu_list_wrapper {
+  border-radius: $prism-radius-sm;
+  box-shadow: $prism-shadow-popover;
+  border: 1px solid $prism-border-color;
+  background: $prism-bg-card;
+  padding: 4px;
+
+  .dropdown_menu_list {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+
+    li {
+      border-bottom: none;
+
+      a {
+        border-radius: $prism-radius-sm;
+        color: $prism-text-body;
+        font-weight: 600;
+        text-align: left;
+        text-shadow: none;
+        padding: 8px 12px;
+
+        &:hover,
+        &:active {
+          background: $prism-color-primary-light;
+          color: $prism-color-primary-dark;
+          text-shadow: none;
+        }
+      }
+
+      &:first-child a,
+      &:last-child a {
+        border-radius: $prism-radius-sm;
+      }
+    }
+  }
+}
+
+.pagination {
+  a,
+  span.page.current {
+    border-radius: $prism-radius-sm;
+    margin-right: 4px;
+    padding: 5px 11px;
+  }
+
+  span.page.current {
+    background: $prism-color-primary-light;
+    border-color: $prism-color-primary-light;
+    color: $prism-color-primary-dark;
+  }
+}
+
+.pagination_information {
+  color: $prism-text-muted;
+
+  b {
+    color: $prism-text-heading;
+  }
+}

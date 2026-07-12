@@ -1,0 +1,101 @@
+// Prism design tokens. All !default so a host can override any of these by
+// setting the variable before @import "active_admin_prism/prism" in
+// their own scss-src (source-level override only — the committed prism.css
+// is what actually ships; see README for the override workflow).
+
+$prism-color-primary: #6d5bd0 !default;
+$prism-color-primary-dark: #5949b8 !default;
+$prism-color-primary-light: #f2ecfd !default;
+
+$prism-color-success: #22c55e !default;
+$prism-color-success-light: #e8f9ee !default;
+$prism-color-danger: #ef4444 !default;
+$prism-color-danger-light: #fdecec !default;
+$prism-color-warning: #f59e0b !default;
+$prism-color-info: #3b82f6 !default;
+
+$prism-bg-page: #f4f5f7 !default;
+$prism-bg-card: #ffffff !default;
+$prism-bg-sidebar: #ffffff !default;
+
+$prism-text-heading: #1a1f36 !default;
+$prism-text-body: #384250 !default;
+$prism-text-muted: #6b7280 !default;
+$prism-text-inverse: #ffffff !default;
+
+$prism-border-color: #e6e8ec !default;
+$prism-border-color-strong: #d6d9e0 !default;
+
+$prism-sidebar-width: 264px !default;
+$prism-radius: 10px !default;
+$prism-radius-sm: 6px !default;
+$prism-radius-pill: 999px !default;
+
+$prism-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 6px rgba(16, 24, 40, 0.04) !default;
+$prism-shadow-popover: 0 4px 6px rgba(16, 24, 40, 0.05), 0 10px 24px rgba(16, 24, 40, 0.08) !default;
+
+$prism-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+  sans-serif !default;
+
+$prism-transition-fast: 120ms ease !default;
+
+// Shared button skins — defined here (rather than in _buttons.scss) since
+// _base.scss (flash banners, the jQuery UI confirm dialog) needs them too,
+// and _base.scss loads before _buttons.scss.
+//
+// !important on background/border-color/color specifically: ActiveAdmin's
+// own basic-button mixin (mixins/_buttons.scss) wraps EVERY button's
+// hover/active state in "&:not(.disabled) { &:hover {...} &:active {...} }"
+// — that :not(.disabled) adds a specificity point our hover/active rules
+// don't have, so AA's own hover gradient (e.g. light-button's white-to-gray)
+// wins even when our base (non-hover) rule correctly wins on specificity +
+// load order. This bit us twice (Cancel button shape, then "New Resource"
+// button turning white on hover) in two different button contexts before
+// being fixed here once, at the source, for every button using these mixins.
+@mixin prism-button-primary {
+  background: $prism-color-primary !important;
+  background-image: none !important;
+  border: 1px solid $prism-color-primary;
+  border-radius: $prism-radius-sm;
+  color: $prism-text-inverse !important;
+  text-shadow: none;
+  box-shadow: none;
+  font-weight: 600;
+  padding: 9px 16px;
+  transition: background $prism-transition-fast, border-color $prism-transition-fast;
+
+  &:hover {
+    background: $prism-color-primary-dark !important;
+    border-color: $prism-color-primary-dark;
+    color: $prism-text-inverse !important;
+  }
+
+  &:active {
+    background: $prism-color-primary-dark !important;
+    box-shadow: none;
+  }
+}
+
+@mixin prism-button-secondary {
+  background: $prism-bg-card !important;
+  background-image: none !important;
+  border: 1px solid $prism-border-color-strong;
+  border-radius: $prism-radius-sm;
+  color: $prism-text-body !important;
+  text-shadow: none;
+  box-shadow: none;
+  font-weight: 600;
+  padding: 8px 15px;
+  transition: background $prism-transition-fast, border-color $prism-transition-fast;
+
+  &:hover {
+    background: $prism-bg-page !important;
+    border-color: $prism-text-muted;
+    color: $prism-text-heading !important;
+  }
+
+  &:active {
+    background: $prism-bg-page !important;
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,281 @@
+// Global resets/typography layered on top of ActiveAdmin's own base.scss.
+// Kept intentionally small — we're reskinning existing markup, not replacing
+// ActiveAdmin's structural CSS.
+
+body {
+  background: $prism-bg-page;
+  color: $prism-text-body;
+  font-family: $prism-font-family;
+}
+
+#active_admin_content {
+  h2,
+  h3 {
+    color: $prism-text-heading;
+    font-weight: 600;
+  }
+}
+
+a {
+  color: $prism-color-primary;
+
+  &:hover {
+    color: $prism-color-primary-dark;
+  }
+}
+
+#title_bar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  text-shadow: none;
+  padding: 10px 10px 8px;
+
+  h2#page_title {
+    color: $prism-text-heading;
+    font-weight: 700;
+    font-size: 1.6em;
+    letter-spacing: -0.01em;
+  }
+}
+
+#footer {
+  color: $prism-text-muted;
+  font-size: 0.85em;
+  padding: 10px;
+  border-top: 1px solid $prism-border-color;
+
+  a {
+    color: $prism-text-muted;
+    text-decoration: underline;
+
+    &:hover {
+      color: $prism-color-primary;
+    }
+  }
+}
+
+// Flash messages — ActiveAdmin renders these with a heavy full-width
+// gradient bar (padding: 13px 30px 11px, font-size: 1.1em); this reskins
+// them into a compact, inset, color-coded banner. ".flashes" itself gets
+// its grid placement from _sidebar.scss (must be explicit — see comment
+// there on why leaving it to auto-placement broke the layout).
+.flashes {
+  padding: 10px 10px 0;
+}
+
+// "body.active_admin .flash" (not a flat ".flash") on purpose: ActiveAdmin
+// itself styles flashes via "body.logged_in .flash" AND
+// "body.logged_out .flash" (active_admin/components/_flash_messages.scss)
+// — both specificity (0,2,1), strictly higher than a flat ".flash" rule's
+// (0,1,0), so a flat rule here loses on the login page every time and
+// loses on the main app too whenever a property collides (background,
+// color, padding, border are exactly what both of AA's rules set). Both
+// "logged_in" and "logged_out" bodies always carry an "active_admin"
+// class too (hardcoded in layouts/active_admin_logged_out.html.erb, and
+// added by this gem's own body_classes override for the main app layout —
+// see lib/active_admin/views/flash_messages.rb), so "body.active_admin
+// .flash" ties AA's specificity exactly (0,2,1) instead of losing to it —
+// and since prism.css always loads after active_admin.css (see
+// INTEGRATION.md's "Verifying the install"), that tie resolves in our
+// favor via load order on every page, logged in or out.
+body.active_admin .flash {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: $prism-bg-page;
+  border: 1px solid $prism-border-color;
+  border-left: 3px solid $prism-text-muted;
+  border-radius: $prism-radius-sm;
+  box-shadow: none;
+  text-shadow: none;
+  color: $prism-text-heading;
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 10px 16px;
+  margin-bottom: 0;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  // 320ms/cubic-bezier here matches Configuration#flash_transition_ms's
+  // default and is overridden inline by prism.js (transition-duration) if a
+  // host configures a different value — see that file's flash-dismiss IIFE.
+  transition: opacity 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Toggled by prism.js — auto-dismissed after flash_auto_dismiss_seconds,
+  // or on clicking .prism-flash-dismiss — before being removed from the DOM
+  // outright once the transition finishes.
+  &.prism-flash-hide {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  &.flash_notice {
+    background: $prism-color-success-light;
+    border-left-color: $prism-color-success;
+    color: darken($prism-color-success, 20%);
+  }
+
+  &.flash_error,
+  &.flash_alert {
+    background: $prism-color-danger-light;
+    border-left-color: $prism-color-danger;
+    color: darken($prism-color-danger, 10%);
+  }
+}
+
+.prism-flash-message {
+  flex: 1 1 auto;
+}
+
+.prism-flash-dismiss {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -4px -2px 0;
+  padding: 0;
+  border: none;
+  border-radius: $prism-radius-sm;
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity $prism-transition-fast, background $prism-transition-fast;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.06) !important;
+  }
+}
+
+.prism-flash-dismiss-icon {
+  display: block;
+  margin: 0;
+}
+
+// The delete/batch-action confirmation dialog ActiveAdmin renders via
+// jQuery UI ($.fn.dialog, see active_admin/base.js) — completely separate
+// markup from anything else on the page, so it needs its own reskin.
+.ui-widget-overlay {
+  background: rgba(15, 18, 26, 0.45);
+}
+
+.ui-dialog {
+  background: $prism-bg-card;
+  border: 1px solid $prism-border-color;
+  border-radius: $prism-radius;
+  box-shadow: $prism-shadow-popover;
+  padding: 0;
+  overflow: hidden;
+  // jQuery UI calls `.focus()` on this element when it opens
+  // (_focusTabbable override in active_admin/base.js), which otherwise
+  // triggers the browser's default focus ring around the whole dialog.
+  outline: none;
+
+  &:focus {
+    outline: none;
+  }
+
+  .ui-dialog-titlebar {
+    background: $prism-bg-card;
+    border: none;
+    border-bottom: 1px solid $prism-border-color;
+    box-shadow: none;
+    text-shadow: none;
+    color: $prism-text-heading;
+    font-weight: 700;
+    padding: 16px 20px;
+
+    span {
+      color: inherit;
+    }
+  }
+
+  // A plain confirm (no batch-action inputs) renders an *empty* <ul> here.
+  // Padding lives on the <li> (not on `form`/`ul`), so that empty case
+  // collapses to zero height instead of leaving an awkward blank gap
+  // between the title and the button pane.
+  form {
+    padding: 0;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+
+    li {
+      padding: 10px 20px;
+      margin: 0;
+    }
+  }
+
+  label {
+    color: $prism-text-body;
+    font-weight: 600;
+  }
+
+  .ui-dialog-buttonpane {
+    background: $prism-bg-page;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    .ui-dialog-buttonset {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  // AA's own modal_dialog.scss targets these same buttons with
+  // "button { @include dark-button } button:last-child { @include
+  // light-button }" — :last-child has one more selector-class of
+  // specificity than a bare "button" rule, so it beats a flat override
+  // regardless of load order. Matching :first-child/:last-child here
+  // (rather than a single flat rule) is what makes OK and Cancel actually
+  // both pick up Prism's shape instead of Cancel keeping AA's pill-shaped
+  // light-button (border-radius: 200px).
+  .ui-dialog-buttonpane button,
+  .ui-dialog-buttonset button {
+    margin: 0;
+
+    &:first-child {
+      @include prism-button-primary;
+    }
+
+    &:last-child {
+      @include prism-button-secondary;
+    }
+  }
+}
+
+.breadcrumb {
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: $prism-text-muted;
+  margin-bottom: 6px;
+
+  a,
+  a:link,
+  a:visited,
+  a:active {
+    color: $prism-text-muted;
+    text-decoration: none;
+
+    &:hover {
+      color: $prism-color-primary;
+      text-decoration: none;
+    }
+  }
+
+  .breadcrumb_sep {
+    color: $prism-border-color-strong;
+  }
+}

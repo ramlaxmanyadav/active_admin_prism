@@ -1,0 +1,5 @@
+// Exercises the gem's variable_overrides.scss integration end-to-end —
+// if this fails to compile, the gem's Sass variable overrides are broken.
+@import "active_admin_prism/variable_overrides";
+@import "active_admin/mixins";
+@import "active_admin/base";

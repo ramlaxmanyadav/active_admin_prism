@@ -1,0 +1,479 @@
+// Turns ActiveAdmin's #wrapper (normally a single-column, top-nav layout)
+// into a two-column grid: a fixed-width left sidebar (rendered by
+// ActiveAdmin::Views::PrismSidebar in place of the default Header/
+// TabbedNavigation) plus a fluid content column carrying the existing
+// #title_bar / #active_admin_content / #footer stack untouched.
+//
+// ".index #wrapper" is overridden explicitly because ActiveAdmin's own
+// structure/_main_structure.scss sets `display: table` there with higher
+// selector specificity than a bare "#wrapper" rule.
+// ActiveAdmin::Views::Pages::Base#build_page renders, in this order, as
+// direct children of #wrapper: build_unsupported_browser (conditional),
+// header, title_bar, build_flash_messages (-> .flashes), the main
+// #active_admin_content, then footer. Every one of them MUST get an
+// explicit grid-row here — leaving any child to auto-place would shift
+// everything after it into the wrong row via CSS Grid's implicit auto-flow
+// (this is what caused .flashes to land in the "1fr" content row and
+// stretch to fill the whole page).
+//
+// "body:not(.logged_out)" excludes the signed-out layout
+// (layouts/active_admin_logged_out.html.erb), which reuses the same
+// "#wrapper" id for a completely different two-child structure
+// (#content_wrapper + #footer, no sidebar at all) — this grid would
+// otherwise force those two children into side-by-side grid cells. See
+// _login.scss for that layout's own (unrelated) styling.
+body:not(.logged_out) #wrapper,
+body:not(.logged_out).index #wrapper {
+  display: grid;
+  grid-template-columns: $prism-sidebar-width 1fr;
+  grid-template-rows: auto auto auto 1fr auto;
+  min-height: 100vh;
+  width: 100%;
+}
+
+#header.prism-sidebar {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  display: flex;
+  // !important here: AA's own #header rule (a plain ID selector) sets a
+  // background-color + background-image gradient with a lower-but-nonzero
+  // specificity — this class already wins that fight on specificity alone,
+  // but pinning it with !important removes any doubt for the single most
+  // visible element on the page.
+  background: $prism-bg-sidebar !important;
+  background-image: none !important;
+  border-right: 1px solid $prism-border-color;
+  padding: 0;
+  height: auto;
+  width: $prism-sidebar-width;
+  position: sticky;
+  top: 0;
+  // Must be "stretch" (the grid default — spelled out here since it's load
+  // bearing), not "start": since this spans every row (grid-row: 1 / -1)
+  // in a grid whose total height is only guaranteed to reach 100vh via
+  // #wrapper's min-height, "start" shrink-wraps this to its own content's
+  // height, leaving the page's own background visible below it on any
+  // page short enough that the content columns don't reach 100vh on their
+  // own. max-height below still caps it at 100vh on taller pages.
+  align-self: stretch;
+  max-height: 100vh;
+  overflow: hidden;
+  z-index: 100;
+
+  // Reset the inherited primary-gradient/text-shadow look from AA's default
+  // #header rule — this component owns its own visual language.
+  text-shadow: none !important;
+  box-shadow: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#title_bar {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.flashes {
+  grid-column: 2;
+  grid-row: 3;
+  align-self: start;
+}
+
+#active_admin_content {
+  grid-column: 2;
+  grid-row: 4;
+  min-width: 0;
+  // ActiveAdmin's own default is `padding: $horizontal-page-margin` (30px).
+  padding: 10px;
+}
+
+// The "Powered by Active Admin" text lives in the sidebar instead (see
+// #header.prism-sidebar .prism-sidebar-footer below) when
+// ActiveAdminPrism::Configuration#sidebar_footer is true (the
+// default) — Pages::Base#build_page always renders this original #footer
+// regardless, so it's hidden here rather than suppressed at the Ruby
+// level (a smaller, lower-risk change than overriding build_page itself
+// just to drop one call). "prism-sidebar-footer-disabled" (set in
+// lib/active_admin/views/flash_messages.rb#body_classes) is what actually
+// governs this — the PrismSidebar Ruby code independently skips rendering
+// the sidebar version when that config is off, so this is what keeps the
+// two in sync rather than a redundant visual-only toggle.
+body:not(.prism-sidebar-footer-disabled) #footer {
+  display: none;
+}
+
+// Everything below is scoped under "#header.prism-sidebar" (ID + class) —
+// not just ".prism-sidebar-*" classes — specifically because
+// active_admin/_header.scss has `#header a, #header a:link { color:
+// $page-header-text-color }` (a light gray meant for AA's own dark gradient
+// header). That selector is ID-scoped, so it beats ANY class-only selector
+// on specificity alone regardless of load order — a flat ".prism-nav-link"
+// rule can never win that fight. Every real link/icon in here needs at
+// least the "#header" ID on its own selector to reliably override it (this
+// is also why a <span>-based item like the group toggle never showed the
+// bug — #header a only matches actual <a> tags).
+#header.prism-sidebar {
+  .prism-sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+  }
+
+  .prism-sidebar-brand {
+    flex: 0 0 auto;
+    padding: 20px 24px;
+    border-bottom: 1px solid $prism-border-color;
+
+    #site_title {
+      margin: 0;
+      padding: 0;
+      font-size: 1.15em;
+      font-weight: 700;
+      color: $prism-text-heading;
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+    }
+  }
+
+  // "Languages" dropdown (ActiveAdminPrismTheme::Configuration
+  // #language_switcher/#languages) — sits between the brand and the Pages
+  // nav list. Positioned relative so .prism-lang-menu (an absolutely
+  // positioned popover, toggled open/closed by prism.js) anchors to it
+  // rather than to the whole sidebar.
+  .prism-sidebar-lang {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    border-bottom: 1px solid $prism-border-color;
+
+    &.open {
+      .prism-chevron {
+        transform: rotate(180deg);
+      }
+
+      .prism-lang-menu {
+        display: block;
+      }
+    }
+  }
+
+  .prism-lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: $prism-radius-sm;
+    color: $prism-text-body;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: background $prism-transition-fast;
+
+    &:hover {
+      background: $prism-bg-page;
+    }
+
+    .prism-nav-icon {
+      flex: 0 0 auto;
+      color: $prism-text-muted;
+    }
+
+    .prism-chevron {
+      flex: 0 0 auto;
+      margin-left: auto;
+      transition: transform $prism-transition-fast;
+    }
+  }
+
+  .prism-lang-current {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .prism-lang-menu {
+    display: none;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 4px;
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    z-index: 50;
+    background: $prism-bg-card;
+    border: 1px solid $prism-border-color;
+    border-radius: $prism-radius-sm;
+    box-shadow: $prism-shadow-popover;
+
+    li {
+      margin: 0;
+    }
+  }
+
+  .prism-lang-option {
+    display: block;
+    padding: 8px 10px;
+    border-radius: $prism-radius-sm;
+    color: $prism-text-body;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      background: $prism-bg-page;
+    }
+
+    &.active {
+      background: $prism-color-primary-light;
+      color: $prism-color-primary-dark;
+    }
+  }
+
+  .prism-sidebar-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px 12px;
+  }
+
+  .prism-sidebar-utility {
+    flex: 0 0 auto;
+    padding: 12px;
+    border-top: 1px solid $prism-border-color;
+
+    ul.prism-nav-utility {
+      background: $prism-bg-page;
+      border-radius: $prism-radius;
+      padding: 4px;
+    }
+
+    .prism-nav-item {
+      margin: 0;
+    }
+
+    // ActiveAdmin's default utility menu (Namespace#build_default_utility_nav)
+    // always uses these two ids for the signed-in-user row and the logout
+    // link — style them as an "account" row rather than plain nav items.
+    #prism_nav_current_user {
+      > .prism-nav-link {
+        padding: 10px 10px 6px;
+        font-weight: 600;
+        color: $prism-text-heading;
+        font-size: 0.88em;
+
+        &:hover {
+          background: transparent;
+        }
+
+        .prism-nav-label {
+          white-space: normal;
+          word-break: break-word;
+        }
+      }
+    }
+
+    #prism_nav_logout {
+      > .prism-nav-link {
+        padding: 6px 10px 8px;
+        font-size: 0.85em;
+        color: $prism-text-muted;
+
+        &:hover {
+          color: $prism-color-danger;
+          background: transparent;
+        }
+      }
+    }
+  }
+
+  // "Powered by Active Admin X.Y.Z" — moved here from the page's own
+  // #footer (hidden above) so it stays pinned below the nav/account area
+  // regardless of how long the menu grows, instead of trailing after the
+  // main content. flex: 0 0 auto (like .prism-sidebar-utility above) keeps
+  // it a fixed-height footer rather than something the flex column could
+  // stretch or that .prism-sidebar-scroll's growth could push down.
+  .prism-sidebar-footer {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    border-top: 1px solid $prism-border-color;
+    color: $prism-text-muted;
+    font-size: 0.72em;
+    line-height: 1.4;
+    text-align: center;
+
+    a {
+      color: $prism-text-muted;
+      text-decoration: underline;
+
+      &:hover {
+        color: $prism-color-primary;
+      }
+    }
+  }
+
+  .prism-nav-section-label {
+    padding: 0 12px 8px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $prism-text-muted;
+  }
+
+  ul.prism-nav {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .prism-nav-item {
+    margin: 2px 0;
+
+    > .prism-nav-link,
+    > .prism-nav-group-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: $prism-radius-sm;
+      color: $prism-text-heading;
+      font-size: 0.92em;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      transition: background $prism-transition-fast, color $prism-transition-fast;
+
+      &:hover {
+        background: $prism-bg-page;
+        color: $prism-text-heading;
+      }
+    }
+
+    &.active {
+      > .prism-nav-link,
+      > .prism-nav-group-toggle {
+        background: $prism-color-primary-light;
+        color: $prism-color-primary-dark;
+        font-weight: 700;
+      }
+    }
+
+    .prism-nav-icon {
+      flex: 0 0 auto;
+      color: inherit;
+    }
+
+    .prism-nav-label {
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .prism-chevron {
+      flex: 0 0 auto;
+      transition: transform $prism-transition-fast;
+    }
+
+    &.open > .prism-nav-group-toggle .prism-chevron {
+      transform: rotate(180deg);
+    }
+
+    .prism-nav-submenu {
+      list-style: none;
+      margin: 2px 0 2px 30px;
+      padding: 0;
+      display: none;
+    }
+
+    &.open > .prism-nav-submenu {
+      display: block;
+    }
+
+    &.has-children > .prism-nav-submenu .prism-nav-item > .prism-nav-link {
+      font-size: 0.88em;
+    }
+  }
+
+  .prism-nav-utility .prism-nav-item > .prism-nav-link,
+  .prism-nav-utility .prism-nav-item > .prism-nav-group-toggle {
+    color: $prism-text-muted;
+  }
+
+  .nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: auto;
+    border-radius: $prism-radius-pill;
+    background: $prism-color-primary;
+    color: $prism-text-inverse;
+    font-size: 0.72em;
+    font-weight: 700;
+    line-height: 20px;
+  }
+}
+
+.prism-sidebar-mobile-toggle {
+  display: none;
+}
+
+// Off-canvas on narrow viewports: collapsed by default, toggled by
+// `.prism-sidebar-open` on <body> (see active_admin_prism/prism.js).
+@media (max-width: 900px) {
+  .prism-sidebar-mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    width: 38px;
+    height: 38px;
+    border-radius: $prism-radius-sm;
+    background: $prism-bg-card;
+    color: $prism-text-body;
+    box-shadow: $prism-shadow-card;
+    cursor: pointer;
+    z-index: 200;
+  }
+
+  #wrapper,
+  .index #wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  #header.prism-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform $prism-transition-fast;
+    box-shadow: $prism-shadow-popover;
+  }
+
+  #title_bar,
+  .flashes,
+  #active_admin_content,
+  #footer {
+    grid-column: 1;
+  }
+
+  body.prism-sidebar-open #header.prism-sidebar {
+    transform: translateX(0);
+  }
+}

@@ -1,0 +1,37 @@
+<%#
+  Overrides ActiveAdmin's own active_admin/devise/sessions/new.html.erb
+  (shipped in the activeadmin gem at the same relative view path) so the
+  gem's Rails::Engine view path — added after ActiveAdmin's own, since this
+  gem is required after "activeadmin" in a host's Gemfile — takes priority
+  over it. See INTEGRATION.md's "Sign-in page" section for the Gemfile-order
+  note and the config.login_page escape hatch.
+
+  The actual authentication form below (`active_admin_form_for` block, the
+  devise `f.inputs`/`f.actions` calls) is byte-for-byte what ActiveAdmin's
+  own template renders — only the markup around it (the brand block, from
+  the shared devise/shared/_brand partial) is new — so sign-in behavior,
+  field list, and error rendering are untouched.
+%>
+<div id="login" class="prism-login">
+  <% action_title = title t('active_admin.devise.login.title') %>
+  <%= render "active_admin/devise/shared/brand", action_title: action_title, subtitle: prism_login_tagline %>
+
+  <% scope = Devise::Mapping.find_scope!(resource_name) %>
+  <%= active_admin_form_for(resource, as: resource_name, url: send(:"#{scope}_session_path"), html: { id: "session_new" }) do |f|
+    f.inputs do
+      resource.class.authentication_keys.each_with_index { |key, index|
+        f.input key, label: t("active_admin.devise.#{key}.title"), input_html: { autofocus: index.zero? }
+      }
+      f.input :password, label: t('active_admin.devise.password.title')
+      f.input :remember_me, label: t('active_admin.devise.login.remember_me'), as: :boolean if devise_mapping.rememberable?
+    end
+    f.actions do
+      f.action :submit, label: t('active_admin.devise.login.submit'), button_html: { value: t('active_admin.devise.login.submit') }
+    end
+  end
+  %>
+
+  <div class="prism-login-links">
+    <%= render partial: "active_admin/devise/shared/links" %>
+  </div>
+</div>

@@ -1,0 +1,15 @@
+// Entrypoint compiled (via bin/build-css) into
+// app/assets/stylesheets/active_admin_prism/prism.css — the file
+// actually shipped and auto-registered by ActiveAdminPrism::Engine.
+//
+// Not `@import`-ed by host apps directly: see README for why this ships as
+// plain committed CSS rather than SCSS source consumers compile themselves.
+@import "variables";
+@import "base";
+@import "sidebar";
+@import "panels";
+@import "tables";
+@import "forms";
+@import "buttons";
+@import "icons";
+@import "login";

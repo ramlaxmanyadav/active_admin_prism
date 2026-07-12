@@ -1,0 +1,306 @@
+// Devise auth pages (sign in, sign up, forgot/reset password, resend
+// confirmation, resend unlock) — see the shared
+// app/views/active_admin/devise/shared/_brand.html.erb partial for the
+// markup this targets (rendered by every action's own view — sessions/new,
+// registrations/new, passwords/new, passwords/edit, unlocks/new,
+// confirmations/new), and ActiveAdminPrism::Configuration#login_page/
+// #login_logo/#login_app_name/#login_tagline for the config behind it
+// (login_tagline only actually renders on sessions#new — see the partial).
+//
+// Scoped under "body.logged_out:has(.prism-login-brand)" rather than a
+// plain "body.logged_out" so that config.login_page = false — which skips
+// rendering .prism-login-brand entirely — falls back to ActiveAdmin's
+// completely untouched stock look on every one of these pages with no
+// separate "disabled" CSS needed here. Same :has()-without-support caveat
+// as the Filters-panel reflow in _panels.scss: browsers lacking :has()
+// just keep AA's default appearance instead of Prism's card/blob treatment.
+body.logged_out:has(.prism-login-brand) {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $prism-bg-page;
+  overflow: hidden;
+  position: relative;
+
+  // Soft animated background blobs — pure CSS radial-gradient pseudo
+  // elements on <body> itself, no extra markup or JS required.
+  &::before,
+  &::after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  &::before {
+    width: 420px;
+    height: 420px;
+    top: -140px;
+    left: -120px;
+    background: radial-gradient(circle at 30% 30%, $prism-color-primary, transparent 70%);
+    animation: prism-login-blob-a 16s ease-in-out infinite;
+  }
+
+  &::after {
+    width: 360px;
+    height: 360px;
+    bottom: -120px;
+    right: -100px;
+    background: radial-gradient(circle at 70% 70%, $prism-color-primary-light, transparent 70%);
+    animation: prism-login-blob-b 18s ease-in-out infinite;
+  }
+
+  #wrapper {
+    position: relative;
+    z-index: 1;
+    display: block;
+    min-height: 0;
+    width: auto;
+  }
+
+  #content_wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 400px;
+    max-width: 90vw;
+    margin: 0 auto;
+  }
+
+  .flashes {
+    width: 100%;
+    padding: 0 0 10px;
+  }
+
+  #active_admin_content {
+    width: 100%;
+    box-sizing: border-box;
+    background: $prism-bg-card;
+    border: 1px solid $prism-border-color;
+    border-radius: $prism-radius;
+    box-shadow: $prism-shadow-popover;
+    padding: 40px 36px 32px;
+  }
+
+  #footer {
+    position: relative;
+    z-index: 1;
+    border-top: none;
+    text-align: center;
+  }
+
+  // _forms.scss's "form fieldset.inputs" gives every fieldset its own
+  // white card chrome (border + border-radius) — right everywhere else,
+  // where a fieldset sits directly on the gray page background, but
+  // redundant here: the fieldset already sits inside #active_admin_content
+  // (itself a white card, above). ActiveAdmin's own login-page reset
+  // (active_admin/pages/_logged_out.scss's "body.logged_out #login form
+  // fieldset") already zeroes background/padding/box-shadow but never
+  // touches border/border-radius, so without this, the card-in-a-card
+  // outline was the "too many borders" this rule fixes.
+  #login fieldset.inputs {
+    border: none;
+    border-radius: 0;
+  }
+
+  // The submit button (Login/Sign up/Reset My Password/...) defaults to
+  // a flush-left button, out of step with the centered brand block above
+  // and the centered link chips below. A true full-width button (an
+  // earlier version of this rule) fixed the alignment but read as
+  // oversized next to the (narrower) input fields above it — this keeps
+  // it an intentionally-sized, centered button instead: same visual
+  // weight as the fields above rather than stretched edge-to-edge.
+  //
+  // "float: none" on the li is still required for text-align: center to
+  // have any effect: ActiveAdmin itself floats that wrapping <li> ("form
+  // fieldset.buttons li, form fieldset.actions li { float: left; padding:
+  // 0; }", active_admin/_forms.scss) — a floated box establishes its own
+  // block formatting context and ignores an ancestor's text-align
+  // entirely, so centering never took effect (and a floated box also
+  // shrink-wraps to content width regardless of any width set on its
+  // child) until this is unset.
+  #login fieldset.actions {
+    margin-top: 4px;
+    text-align: center;
+
+    li {
+      float: none;
+    }
+
+    // AA's own rule zeroes this li's padding outright ("form
+    // fieldset.buttons li, form fieldset.actions li { ... padding: 0;
+    // }") — without breathing room here, the button reads as jammed
+    // right up against the fields above and the link chips below.
+    //
+    // margin-left nudges the centered button to line up with the actual
+    // input columns above it, rather than with the full card width
+    // (label+input combined) — "form fieldset ol > li label" gives every
+    // label above a floated column, so the fields themselves are only
+    // ever centered within the remaining space to the label's right.
+    li.input_action {
+      padding: 20px 0;
+      margin-left: 30px;
+      margin-bottom: 15px;
+    }
+
+    input[type="submit"] {
+      display: inline-block;
+      width: auto;
+      min-width: 200px;
+      padding: 12px 28px;
+      font-size: 0.95em;
+    }
+  }
+
+  // ActiveAdmin's shared devise/shared/_error_messages.html.erb partial
+  // (rendered by every action except sessions#new, which uses its own
+  // flash instead) — reskinned into a compact card matching the flash
+  // banners rather than AA's plain bulleted list.
+  #error_explanation {
+    background: $prism-color-danger-light;
+    border: 1px solid rgba($prism-color-danger, 0.3);
+    border-radius: $prism-radius-sm;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    color: darken($prism-color-danger, 10%);
+
+    h2 {
+      background: none !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+      border: none !important;
+      margin: 0 0 6px !important;
+      padding: 0 !important;
+      color: inherit;
+      font-size: 0.95em;
+      font-weight: 700;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.88em;
+      font-weight: 600;
+    }
+  }
+}
+
+@keyframes prism-login-blob-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.1); }
+}
+
+@keyframes prism-login-blob-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-50px, -30px) scale(1.08); }
+}
+
+.prism-login-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.prism-login-logo {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  color: $prism-color-primary;
+}
+
+.prism-login-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.prism-login-beam {
+  stroke-dasharray: 40;
+  animation: prism-login-beam-flow 2.4s linear infinite;
+}
+
+@keyframes prism-login-beam-flow {
+  to { stroke-dashoffset: -80; }
+}
+
+.prism-login-tri {
+  transform-origin: center;
+  animation: prism-login-tri-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes prism-login-tri-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0)); }
+  50% { filter: drop-shadow(0 0 6px rgba($prism-color-primary, 0.45)); }
+}
+
+// Beats "body.logged_out h2" (ActiveAdmin's own gradient-header rule, in
+// active_admin/pages/_logged_out.scss) via the "#login" id rather than a
+// flat class selector — same specificity approach used throughout this
+// gem. Scoped to ".prism-login-brand h2" specifically (not "#login h2")
+// so the plain-text fallback heading rendered when config.login_page is
+// false — which lives directly under #login, not under
+// .prism-login-brand — is completely untouched and keeps AA's own look.
+body.logged_out #login .prism-login-brand h2 {
+  background: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: $prism-text-heading;
+}
+
+.prism-login-title {
+  font-size: 1.6em;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.prism-login-tagline {
+  margin: 4px 0 0;
+  color: $prism-text-muted;
+  font-size: 0.9em;
+}
+
+// Sign-up/forgot-password/etc links
+// (active_admin/devise/shared/_links.erb) — ActiveAdmin renders them as a
+// stack of "<a> <br>" pairs; turn that into a row of small pill chips
+// instead (no divider line needed above them — the button-like chips read
+// as a distinct group on their own, one less "hr" competing with the
+// fieldset/card boundaries above them).
+.prism-login-links {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 14px;
+    border: 1px solid $prism-border-color;
+    border-radius: $prism-radius-pill;
+    background: $prism-bg-page;
+    color: $prism-text-body;
+    font-size: 0.82em;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background $prism-transition-fast, border-color $prism-transition-fast,
+      color $prism-transition-fast;
+
+    &:hover {
+      background: $prism-color-primary-light;
+      border-color: $prism-color-primary;
+      color: $prism-color-primary-dark;
+    }
+  }
+
+  br {
+    display: none;
+  }
+}

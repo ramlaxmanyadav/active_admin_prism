@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prism — Page Not Found</title>
+<style>
+  /*
+    Static public/ error page — Rails serves this straight off disk
+    (ActionDispatch::PublicExceptions), completely outside the asset
+    pipeline and any Rails view/layout, so it can't @import prism.css,
+    use ERB, or rely on any Ruby config. Colors below are copied from
+    this gem's scss-src/_variables.scss defaults (as of the version this
+    was generated from) rather than referencing them, and won't track a
+    host's own color customizations automatically — re-run the generator
+    (or hand-edit this file) after changing your palette if that matters
+    to you. No external requests (fonts, CDNs) on purpose — this page
+    needs to render even if the rest of the app/network is unhealthy.
+  */
+  :root{
+    --primary:#6d5bd0;
+    --primary-dark:#5949b8;
+    --primary-light:#f2ecfd;
+    --bg:#f4f5f7;
+    --card:#ffffff;
+    --border:#e6e8ec;
+    --text:#1a1f36;
+    --muted:#6b7280;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    overflow:hidden;
+    position:relative;
+  }
+
+  .bg-blobs{position:fixed;inset:0;z-index:0;overflow:hidden;}
+  .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.35;will-change:transform;}
+  .blob-1{width:480px;height:480px;background:radial-gradient(circle at 30% 30%, var(--primary), transparent 70%);top:-160px;left:-140px;animation:float1 16s ease-in-out infinite;}
+  .blob-2{width:420px;height:420px;background:radial-gradient(circle at 70% 70%, #a78bfa, transparent 70%);bottom:-140px;right:-120px;animation:float2 18s ease-in-out infinite;}
+  .blob-3{width:300px;height:300px;background:radial-gradient(circle, #ff6b9a, transparent 70%);top:40%;right:10%;opacity:.18;animation:float3 14s ease-in-out infinite;}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(60px,40px) scale(1.1);}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-50px,-30px) scale(1.08);}}
+  @keyframes float3{0%,100%{transform:translate(0,0);}50%{transform:translate(-40px,30px);}}
+
+  .wrapper{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;animation:cardIn .7s cubic-bezier(.2,.8,.2,1) both;}
+  @keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+
+  .card{
+    width:460px;
+    max-width:90vw;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 20px 50px -20px rgba(76,63,180,.25), 0 2px 8px rgba(20,20,40,.04);
+    padding:44px 40px 36px;
+    text-align:center;
+  }
+
+  .prism-mark{width:88px;height:88px;margin:0 auto 8px;position:relative;}
+  .prism-mark svg{width:100%;height:100%;overflow:visible;}
+  .prism-tri{animation:drift 5s ease-in-out infinite;transform-origin:center;}
+  @keyframes drift{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-4px) rotate(-2deg);}}
+  .beam{stroke-dasharray:40;animation:beamFlow 2.4s linear infinite;}
+  @keyframes beamFlow{to{stroke-dashoffset:-80;}}
+  .beam-dash{opacity:.55;animation:fadePulse 1.8s ease-in-out infinite;}
+  @keyframes fadePulse{0%,100%{opacity:.25;}50%{opacity:.7;}}
+  .qmark{animation:bob 2.4s ease-in-out infinite;transform-origin:center;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+
+  .error-code{
+    font-size:76px;
+    font-weight:800;
+    letter-spacing:-.03em;
+    line-height:1;
+    margin:6px 0 6px;
+    background:linear-gradient(135deg,var(--primary), #a78bfa, var(--primary));
+    background-size:200% 200%;
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    animation:gradientShift 6s ease infinite;
+  }
+  @keyframes gradientShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+
+  h1{margin:0 0 8px;font-size:19px;font-weight:700;}
+  p.desc{margin:0 0 28px;color:var(--muted);font-size:13.5px;line-height:1.6;}
+
+  .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .btn-primary,.btn-secondary{
+    padding:11px 20px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:700;
+    font-family:inherit;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-block;
+    transition:background .18s ease, transform .12s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .btn-primary{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    box-shadow:0 8px 20px -8px rgba(109,91,208,.6);
+  }
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-secondary{
+    background:#fff;
+    color:var(--text);
+    border:1.5px solid var(--border);
+  }
+  .btn-secondary:hover{border-color:var(--primary);background:var(--primary-light);}
+
+  .footer-note{margin-top:20px;font-size:12px;color:var(--muted);text-align:center;}
+</style>
+</head>
+<body>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="wrapper">
+    <div class="card">
+      <div class="prism-mark">
+        <svg viewBox="0 0 100 100">
+          <text class="qmark" x="66" y="18" font-size="18" font-weight="800" fill="#a78bfa">?</text>
+          <polygon class="prism-tri" points="24,72 50,20 76,72" fill="rgba(109,91,208,.10)" stroke="#6d5bd0" stroke-width="3"/>
+          <line class="beam-dash" x1="2" y1="55" x2="34" y2="55" stroke="#6d5bd0" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 6"/>
+          <line class="beam" x1="62" y1="46" x2="92" y2="18" stroke="#e53935" stroke-width="3" stroke-linecap="round"/>
+          <line class="beam" x1="62" y1="53" x2="94" y2="53" stroke="#fdd835" stroke-width="3" stroke-linecap="round" style="animation-delay:.15s"/>
+          <line class="beam" x1="62" y1="60" x2="90" y2="90" stroke="#1e88e5" stroke-width="3" stroke-linecap="round" style="animation-delay:.3s"/>
+        </svg>
+      </div>
+
+      <div class="error-code">404</div>
+      <h1>Page not found</h1>
+      <p class="desc">The page you're looking for got refracted somewhere along the way. It may have been moved, renamed, or never existed.</p>
+
+      <div class="actions">
+        <!-- Static file, no Rails route helpers available — point this at your own admin root. -->
+        <a href="/" class="btn-primary">Back to Dashboard</a>
+        <!-- Placeholder — point this at your own support inbox/issue tracker, or remove it. -->
+        <a href="mailto:support@example.com" class="btn-secondary">Report Issue</a>
+      </div>
+    </div>
+    <p class="footer-note">Prism theme for ActiveAdmin</p>
+  </div>
+
+</body>
+</html>

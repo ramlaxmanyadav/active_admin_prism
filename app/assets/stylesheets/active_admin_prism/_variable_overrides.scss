@@ -1,0 +1,43 @@
+// Prism's override of ActiveAdmin's own default (grayscale) Sass palette.
+//
+// Every variable below is declared `!default` in the activeadmin gem itself
+// — active_admin/mixins/_variables.scss and _gradients.scss — and used
+// throughout its own component partials (buttons, dropdown menus, tables,
+// panels, dialogs, breadcrumbs, blank slates...). Because they're `!default`,
+// whichever assignment runs FIRST wins; @import-ing this file before
+// "active_admin/mixins" means ActiveAdmin's own generated CSS inherits
+// Prism's palette as its baseline from the start, rather than gray — even
+// in places this theme's own compiled CSS doesn't explicitly reskin.
+//
+// Usage — in your app's app/assets/stylesheets/active_admin.scss:
+//
+//   @import "active_admin_prism/variable_overrides";
+//   @import "active_admin/mixins";
+//   @import "active_admin/base";
+//
+// Every variable here is itself `!default`, so you can customize further:
+// set your own value before this @import and it wins over Prism's.
+
+// Colors
+$primary-color: #6d5bd0 !default;
+$text-color: #384250 !default;
+$link-color: #6d5bd0 !default;
+$body-background-color: #f4f5f7 !default;
+$secondary-color: #f4f5f7 !default;
+$error-color: #ef4444 !default;
+$table-selected-color: #f2ecfd !default;
+$blank-slate-primary-color: #6b7280 !default;
+$breadcrumbs-color: #6b7280 !default;
+$breadcrumbs-separator-color: #d6d9e0 !default;
+$required-field-marker-color: #9aa1ab !default;
+
+// Gradients (active_admin/mixins/_gradients.scss — used by the
+// section-background / section-header mixins behind panels & dialogs)
+$secondary-gradient-start: #ffffff !default;
+$secondary-gradient-stop: #f4f5f7 !default;
+
+// Sizes
+// AA's default 270px is too narrow for a "select + input" filter row at
+// Prism's padding/font size; #main_content's right margin is calculated
+// from this same variable, so widening it here keeps both in sync.
+$sidebar-width: 320px !default;

@@ -1,0 +1,26 @@
+<%#
+  Overrides ActiveAdmin's own active_admin/devise/passwords/new.html.erb
+  the same way sessions/new.html.erb does (see that file's header comment
+  for the Gemfile-order mechanism this relies on). Form fields/behavior
+  below are byte-for-byte ActiveAdmin's own template; only the header
+  markup (shared devise/shared/_brand partial) and the links wrapper are
+  new.
+%>
+<div id="login" class="prism-login">
+  <% action_title = title t('active_admin.devise.reset_password.title') %>
+  <%= render "active_admin/devise/shared/brand", action_title: action_title, subtitle: action_title %>
+
+  <%= render partial: "active_admin/devise/shared/error_messages", resource: resource %>
+  <%= active_admin_form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post }) do |f|
+    f.inputs do
+      f.input :email
+    end
+    f.actions do
+      f.action :submit, label: t('active_admin.devise.reset_password.submit'), button_html: { value: t('active_admin.devise.reset_password.submit') }
+    end
+  end %>
+
+  <div class="prism-login-links">
+    <%= render partial: "active_admin/devise/shared/links" %>
+  </div>
+</div>
