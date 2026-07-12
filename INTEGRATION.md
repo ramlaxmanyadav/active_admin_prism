@@ -5,6 +5,11 @@ to — switching off `active_admin_prism` in a Rails app. For a quick
 start, see [README.md](README.md); this document goes deeper on every
 option and the reasoning behind it.
 
+**Live demo:** [prism-demo.onrender.com/admin](https://prism-demo.onrender.com/admin) —
+`admin@example.com` / `password`. Hosted on Render's free tier, so the
+first request after a period of inactivity can take up to a minute to
+spin up.
+
 ## Contents
 
 - [Requirements](#requirements)

@@ -9,6 +9,19 @@ no manual asset manifest edits.
 (configuration reference, feature-by-feature usage, switching/disabling the
 theme, troubleshooting). This README is a quick start.
 
+## Live demo
+
+A live demo dashboard is running at
+**[prism-demo.onrender.com/admin](https://prism-demo.onrender.com/admin)**:
+
+```
+Username: admin@example.com
+Password: password
+```
+
+The demo is hosted on Render's free tier, so the first request after a
+period of inactivity can take up to a minute while the instance spins up.
+
 ## Requirements
 
 - ActiveAdmin `>= 3.0, < 4`
