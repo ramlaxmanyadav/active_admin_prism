@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Minifies js-src/prism.js into the committed asset the gem actually ships
+# (app/assets/javascripts/active_admin_prism/prism.js). Host apps never run
+# this — it's a maintainer-only step, so `terser` is a development
+# dependency, never a runtime one (mirrors bin/build-css/sassc exactly).
+#
+# See bin/build-css's own comment for why shipping pre-minified assets
+# matters even though Sprockets hosts would otherwise re-minify on their
+# own `assets:precompile` — Propshaft hosts have no such step at all.
+
+require "terser"
+require "fileutils"
+
+root = File.expand_path("..", __dir__)
+src = File.join(root, "js-src", "prism.js")
+dest_dir = File.join(root, "app", "assets", "javascripts", "active_admin_prism")
+dest = File.join(dest_dir, "prism.js")
+
+minified = Terser.compile(File.read(src), comments: :none)
+
+FileUtils.mkdir_p(dest_dir)
+File.write(dest, minified)
+puts "Built #{dest} (#{File.size(dest)} bytes)"

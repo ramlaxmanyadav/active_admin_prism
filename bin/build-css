@@ -5,7 +5,18 @@
 # gem actually ships (app/assets/stylesheets/active_admin_prism/prism.css).
 # Host apps never run this — it's a maintainer-only step, so `sassc` is a
 # development dependency, never a runtime one.
-
+#
+# style: :compressed (not :expanded) — this is the actual asset shipped and
+# registered via ActiveAdmin.application.register_stylesheet, served as-is
+# to every host regardless of their own asset pipeline. Sprockets hosts
+# would normally re-minify it via their own js/css compressor on
+# `assets:precompile`, but Propshaft (Rails 8's default, and increasingly
+# common on 7.x too) has no built-in minification step at all — shipping
+# it pre-compressed here is what actually gets a minified prism.css in
+# production for those hosts, not just redundant work for Sprockets ones.
+# All the documentation comments explaining specificity fixes etc. still
+# live in scss-src/*.scss (the real source of truth) — nothing here is
+# lost, only the compiled output changes.
 require "sassc"
 require "fileutils"
 
@@ -18,7 +29,7 @@ engine = SassC::Engine.new(
   File.read(src),
   syntax: :scss,
   load_paths: [File.join(root, "scss-src")],
-  style: :expanded
+  style: :compressed
 )
 
 FileUtils.mkdir_p(dest_dir)

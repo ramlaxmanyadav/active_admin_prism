@@ -294,13 +294,20 @@ your app, not something a precompiled CSS file can do on your behalf.
 ## Development
 
 ```sh
-bin/build-css        # compiles scss-src/*.scss -> app/assets/stylesheets/active_admin_prism/prism.css
+bin/build-css        # compiles + minifies scss-src/*.scss -> app/assets/stylesheets/active_admin_prism/prism.css
+bin/build-js         # minifies js-src/prism.js -> app/assets/javascripts/active_admin_prism/prism.js
 bundle install
 bundle exec rspec    # or: rake
 ```
 
-Never hand-edit the committed `prism.css` — edit `scss-src/*.scss` and
-rebuild.
+Never hand-edit the committed `prism.css`/`prism.js` — edit
+`scss-src/*.scss`/`js-src/prism.js` and rebuild. Both committed assets are
+shipped pre-minified (not just for Sprockets hosts, who'd normally
+re-minify on their own `assets:precompile` anyway, but for Propshaft hosts
+too, since Propshaft has no built-in minification step at all) — all the
+documentation comments explaining the theme's various CSS-specificity
+fixes etc. live in the `scss-src`/`js-src` sources, not the compiled
+output.
 
 The test suite boots a minimal Rails + ActiveAdmin + Devise app
 (`spec/dummy`) and exercises the gem against real HTTP requests — no

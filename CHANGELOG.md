@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **The shipped `prism.css`/`prism.js` are now minified.** `bin/build-css`
+  compiles with `style: :compressed` instead of `:expanded`, and a new
+  `bin/build-js` (backed by the `terser` dev dependency) minifies the real
+  source — moved to `js-src/prism.js`, mirroring `scss-src/`'s role —
+  into the compiled `app/assets/javascripts/active_admin_prism/prism.js`.
+  Nothing changes for hosts using Sprockets (which already re-minifies on
+  its own `assets:precompile`), but this is a real reduction for Propshaft
+  hosts, which has no built-in minification step at all. All the
+  documentation comments explaining specificity fixes etc. still live in
+  `scss-src`/`js-src`, not the compiled output — never hand-edit the
+  latter.
 - A "Languages" dropdown renders near the top of the sidebar (below the
   brand, above the Pages nav) — no `admin.build_menu :utility_navigation`
   code needed. Ships with 3 languages by default

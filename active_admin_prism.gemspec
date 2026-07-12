@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"]   = "#{spec.homepage}/blob/main/CHANGELOG.md"
 
   spec.files = Dir.chdir(__dir__) do
-    Dir["app/**/*", "lib/**/*", "scss-src/**/*", "README.md", "INTEGRATION.md", "CHANGELOG.md", "LICENSE.txt"]
+    Dir["app/**/*", "lib/**/*", "scss-src/**/*", "js-src/**/*", "README.md", "INTEGRATION.md", "CHANGELOG.md", "LICENSE.txt"]
       .select { |f| File.file?(f) }
   end
 
@@ -32,4 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "railties", ">= 7.0", "< 9"
 
   spec.add_development_dependency "sassc", "~> 2.4"
+  spec.add_development_dependency "terser", "~> 1.2"
 end
