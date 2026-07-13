@@ -131,6 +131,7 @@ ActiveAdminPrism.configure do |config|
     { label: "Español", locale: :es },
     { label: "Français", locale: :fr }
   ]
+  config.menu_search = true                # default: true
 end
 
 ActiveAdminPrism.enable!
@@ -153,6 +154,7 @@ ActiveAdminPrism.enable!
 | `login_tagline`                  | `"Sign in to your admin dashboard"` | `nil` renders no tagline at all. |
 | `language_switcher`              | `true`  | No "Languages" dropdown renders in the sidebar at all — see [Language switcher](#language-switcher). |
 | `languages`                      | 3 entries (English/Español/Français) | The list the dropdown renders; an empty array (`[]`) has the same effect as `language_switcher = false`. |
+| `menu_search`                    | `true`  | No search box renders above the sidebar's "Pages" nav — see [Menu search](#menu-search). |
 
 **How this crosses the server/client boundary.** `sidebar`,
 `colorize_action_icons`, and the `login_*` flags are pure server-side
@@ -421,6 +423,40 @@ ActiveAdmin's own `Menu`/`MenuItem`/`build_menu` machinery — see
 [Language switcher markup](#language-switcher-markup) for why, and for the
 full class/id reference.
 
+### Menu search
+
+A search box renders at the top of the sidebar, between the language
+switcher (if any) and the "Pages" nav — no setup required beyond the
+default `config.menu_search = true`. It filters your existing `menu do |m|
+... end` items by label as you type; there's no server round trip and no
+change to how those blocks are authored in `app/admin/*.rb` — see
+`lib/active_admin/views/prism_sidebar.rb#render_search_box` for the markup
+and `js-src/prism.js` for the filtering logic itself.
+
+Matching is case-insensitive and works at any nesting depth, since the
+whole menu tree is already rendered up front and the filtering happens
+purely client-side over the existing DOM:
+
+- A submenu item that matches keeps its parent group visible **and
+  expanded**, even though the parent's own label doesn't match — so a
+  match buried a couple of levels deep is never hidden behind a collapsed
+  group.
+- A parent whose own label matches reveals its **entire** submenu,
+  expanded, regardless of whether any individual child also matches.
+- Items that don't match (and have no matching descendant) get
+  `.prism-nav-hidden`; if nothing in the whole nav matches, a
+  `.prism-nav-empty` "No matching menu items" message takes their place.
+
+Clearing the input — via the "x" button (`data-prism-nav-search-clear`,
+only shown while there's a query) or pressing <kbd>Escape</kbd> while the
+input has focus and a value — resets the nav back to its normal
+expand/collapse state (whatever `.open`/`.active` state it already had
+from user-toggling or the current page, unrelated to search).
+
+Turn it off with `config.menu_search = false` — no search box renders at
+all, and the "Pages" nav starts directly below the brand/language
+switcher, matching this gem's behavior before the feature existed.
+
 ### Icon helper
 
 Available anywhere in your admin views (not just the sidebar):
@@ -643,13 +679,20 @@ Ruby view files under `lib/active_admin/views/`.
     div.prism-sidebar-brand
       #site_title                       <- AA's own site_title verb, unchanged
     div.prism-sidebar-lang              <- only if config.language_switcher and #languages is non-empty
+    div.prism-sidebar-search            <- only if config.menu_search
+      svg.prism-nav-icon.prism-search-icon
+      input.prism-nav-search-input[type=search][data-prism-nav-search]
+      span.prism-nav-search-clear[data-prism-nav-search-clear]
+        svg.prism-nav-icon              <- the :x icon
     div.prism-sidebar-scroll
       div.prism-nav-section-label       <- "PAGES"
       ul.prism-nav
         li.prism-nav-item[#prism_nav_<id>]
           [.has-children]               <- item.items.any?
           [.active]                     <- item.current?(current_tab)
-          [.open]                       <- has-children && active, or user-toggled
+          [.open]                       <- has-children && active, or user-toggled, or search match (see below)
+          [.prism-nav-hidden]           <- filtered out by menu search, toggled client-side
+          [.prism-search-open]          <- this item or a descendant matches the current search query
           span.prism-nav-group-toggle   <- only when .has-children
             svg.prism-nav-icon
             span.prism-nav-label
@@ -658,6 +701,7 @@ Ruby view files under `lib/active_admin/views/`.
             svg.prism-nav-icon
             span.prism-nav-label
           ul.prism-nav-submenu          <- only when .has-children, nested li.prism-nav-item...
+      div.prism-nav-empty[.prism-nav-empty-visible]  <- "No matching menu items", shown when search yields zero results
     div.prism-sidebar-utility           <- only if the utility menu has items
       ul.prism-nav.prism-nav-utility
         li#prism_nav_current_user
@@ -707,6 +751,37 @@ as `sidebar_footer`/`collapsible_filters` elsewhere in this gem, rather
 than being fixed at boot the way the sidebar's own header-swap
 registration is (see [Sign-in page](#sign-in-page) for the other example
 of that "built once at boot vs. re-read every request" distinction).
+
+### Menu search markup
+
+```
+div.prism-sidebar-search
+  svg.prism-nav-icon.prism-search-icon
+  input.prism-nav-search-input[type=search][data-prism-nav-search][placeholder="Search menu"]
+  span.prism-nav-search-clear[data-prism-nav-search-clear][.prism-nav-search-clear-visible]
+    svg.prism-nav-icon                          <- the :x icon
+```
+
+All filtering state lives on the existing `li.prism-nav-item` tree
+rendered by [Sidebar](#sidebar-activeadminviewsprismsidebar) — `prism.js`
+reads `[data-prism-nav-search]`'s value on every `input` event and, per
+item, toggles:
+
+- `.prism-nav-hidden` — item (and every descendant) doesn't match and has
+  no matching descendant; hidden via CSS.
+- `.prism-search-open` — item itself matches, or has a matching
+  descendant; combined with `.has-children`, this is what keeps a group
+  expanded during a search independently of its own user-toggled `.open`
+  state.
+- `.prism-nav-search-clear-visible` on the clear button, and
+  `.prism-nav-empty-visible` on `div.prism-nav-empty`, both mirroring
+  whether the query is non-empty / yields zero matches.
+
+<kbd>Escape</kbd> while the input is focused and non-empty, or a click on
+`[data-prism-nav-search-clear]`, clears the value and re-triggers the same
+filtering pass (an empty query matches everything, restoring the nav's
+prior expand/collapse state). None of this touches the server — the menu
+tree itself is rendered once, same as without `config.menu_search`.
 
 ### Panels & cards
 
