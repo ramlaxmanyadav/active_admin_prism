@@ -75,6 +75,103 @@
   });
 })();
 
+// Sidebar menu search box (lib/active_admin/views/prism_sidebar.rb
+// #render_search_box) — filters the "Pages" nav as the visitor types,
+// matching an item's own label at ANY nesting depth, not just top-level
+// entries. A submenu item that matches keeps every one of its ancestors
+// visible and forced open; a parent whose own label matches instead keeps
+// its *entire* subtree visible and expanded, even children that don't
+// match on their own — either way via ".prism-search-open", distinct from
+// the persisted/manual ".open" class above so clearing the search can't
+// clobber a group the visitor had manually pinned open.
+(function () {
+  "use strict";
+
+  function normalize(text) {
+    return (text || "").trim().toLowerCase();
+  }
+
+  function ownLabel(li) {
+    var el = li.querySelector(
+      ":scope > .prism-nav-link .prism-nav-label, :scope > .prism-nav-group-toggle .prism-nav-label"
+    );
+    return el ? normalize(el.textContent) : "";
+  }
+
+  function directChildItems(li) {
+    var submenu = li.querySelector(":scope > .prism-nav-submenu");
+    if (!submenu) return [];
+    return Array.prototype.filter.call(submenu.children, function (child) {
+      return child.classList.contains("prism-nav-item");
+    });
+  }
+
+  // Recurses depth-first, carrying `ancestorOwnMatch` down (true once any
+  // ancestor's own label has matched) so a matched group reveals its whole
+  // subtree, not just itself — and returns whether this node's own label
+  // or any descendant's matched (ignoring ancestorOwnMatch), so that signal
+  // keeps bubbling up to open every group on the path to a deep match
+  // regardless of how many submenu levels separate it from the top.
+  function matchItem(li, query, ancestorOwnMatch) {
+    var ownMatch = !!query && ownLabel(li).indexOf(query) !== -1;
+    var childMatch = false;
+
+    directChildItems(li).forEach(function (child) {
+      if (matchItem(child, query, ancestorOwnMatch || ownMatch)) childMatch = true;
+    });
+
+    var visible = !query || ancestorOwnMatch || ownMatch || childMatch;
+    li.classList.toggle("prism-nav-hidden", !visible);
+    li.classList.toggle("prism-search-open", !!query && (ownMatch || childMatch || ancestorOwnMatch));
+
+    return ownMatch || childMatch;
+  }
+
+  function applySearch(sidebar, query) {
+    var nav = sidebar.querySelector(".prism-sidebar-scroll > .prism-nav");
+    if (!nav) return;
+
+    var anyVisible = false;
+    Array.prototype.forEach.call(nav.children, function (li) {
+      if (!li.classList.contains("prism-nav-item")) return;
+      if (matchItem(li, query, false)) anyVisible = true;
+    });
+
+    var empty = sidebar.querySelector(".prism-nav-empty");
+    if (empty) empty.classList.toggle("prism-nav-empty-visible", !!query && !anyVisible);
+
+    var clear = sidebar.querySelector("[data-prism-nav-search-clear]");
+    if (clear) clear.classList.toggle("prism-nav-search-clear-visible", !!query);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var sidebar = document.getElementById("header");
+    if (!sidebar || !sidebar.classList.contains("prism-sidebar")) return;
+
+    var input = sidebar.querySelector("[data-prism-nav-search]");
+    if (!input) return;
+
+    input.addEventListener("input", function () {
+      applySearch(sidebar, normalize(input.value));
+    });
+
+    input.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape" || !input.value) return;
+      input.value = "";
+      applySearch(sidebar, "");
+    });
+
+    var clearBtn = sidebar.querySelector("[data-prism-nav-search-clear]");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () {
+        input.value = "";
+        applySearch(sidebar, "");
+        input.focus();
+      });
+    }
+  });
+})();
+
 // Routes every plain `data-confirm` link (row-level View/Edit/Delete
 // actions, any other rails-ujs confirm) through ActiveAdmin's own styled
 // jQuery UI dialog — the same one it already uses for Batch Actions —
