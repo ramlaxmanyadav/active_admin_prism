@@ -116,6 +116,7 @@ ActiveAdminPrism.configure do |config|
     { label: "Español", locale: :es },
     { label: "Français", locale: :fr }
   ]
+  config.menu_search = true             # search box that filters the sidebar's Pages nav
 end
 
 ActiveAdminPrism.enable!
@@ -177,6 +178,22 @@ endpoint that sets the locale server-side:
 ```
 
 Turn the whole thing off with `config.language_switcher = false`.
+
+## Menu search
+
+A search box renders at the top of the sidebar's "Pages" nav, filtering
+menu items by label as you type — pure client-side DOM filtering, no
+server round trip, no change to how you write `menu do |m| ... end` in
+`app/admin/*.rb`.
+
+Matching works at any nesting depth: a submenu item that matches keeps its
+parent group visible and expanded even though the parent's own label
+doesn't match, and a parent whose own label matches reveals its entire
+submenu, expanded. Clearing the box (the "x" button, or <kbd>Escape</kbd>)
+resets everything back to its normal expand/collapse state. No matches
+shows a "No matching menu items" message in place of the nav.
+
+Turn it off with `config.menu_search = false`.
 
 ## Toggle switches
 
