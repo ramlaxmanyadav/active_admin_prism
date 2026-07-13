@@ -136,6 +136,19 @@ module ActiveAdminPrism
     # as it would be if you'd wired up the utility_navigation menu by hand.
     attr_accessor :languages
 
+    # Whether a search box renders at the top of the sidebar's "Pages" nav,
+    # letting a visitor filter menu items by label without scrolling —
+    # matching against every item regardless of nesting (a top-level item,
+    # or one buried in a submenu). A submenu item that matches keeps its
+    # parent visible (and expanded) even though the parent's own label
+    # doesn't match; a parent that matches shows all of its children. See
+    # lib/active_admin/views/prism_sidebar.rb#render_search_box for the
+    # markup and js-src/prism.js for the filtering itself (pure client-side
+    # DOM filtering — no server round trip, no change to how menu do |m|
+    # ... end is authored in app/admin/*.rb). false renders no search box at
+    # all.
+    attr_accessor :menu_search
+
     def initialize
       @sidebar = true
       @colorize_action_icons = true
@@ -156,6 +169,7 @@ module ActiveAdminPrism
         { label: "Español", locale: :es },
         { label: "Français", locale: :fr }
       ]
+      @menu_search = true
     end
   end
 

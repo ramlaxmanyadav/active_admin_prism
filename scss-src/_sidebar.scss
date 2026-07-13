@@ -238,10 +238,96 @@ body:not(.prism-sidebar-footer-disabled) #footer {
     }
   }
 
+  // Sits between the brand/language switcher and .prism-sidebar-scroll —
+  // flex: 0 0 auto like those, so it stays pinned above the scrolling nav
+  // rather than scrolling away with it (a visitor should never need to
+  // scroll up just to reach the search box itself).
+  .prism-sidebar-search {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 12px 4px;
+    padding: 8px 10px;
+    border: 1px solid $prism-border-color;
+    border-radius: $prism-radius-sm;
+    background: $prism-bg-page;
+
+    &:focus-within {
+      border-color: $prism-color-primary;
+    }
+
+    .prism-search-icon {
+      flex: 0 0 auto;
+      color: $prism-text-muted;
+    }
+  }
+
+  .prism-nav-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: $prism-text-body;
+    font-size: 0.85em;
+
+    &:focus {
+      outline: none;
+    }
+
+    &::placeholder {
+      color: $prism-text-muted;
+    }
+
+    // Removes Chrome/Edge/Safari's built-in clear ("x") button on
+    // type="search" inputs — this component renders its own
+    // (.prism-nav-search-clear) so the two don't visually double up.
+    &::-webkit-search-cancel-button {
+      -webkit-appearance: none;
+      appearance: none;
+    }
+  }
+
+  .prism-nav-search-clear {
+    display: none;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    color: $prism-text-muted;
+    cursor: pointer;
+
+    &.prism-nav-search-clear-visible {
+      display: flex;
+    }
+
+    &:hover {
+      color: $prism-text-heading;
+    }
+
+    .prism-nav-icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
   .prism-sidebar-scroll {
     flex: 1 1 auto;
     overflow-y: auto;
     padding: 20px 12px;
+  }
+
+  // Shown by js-src/prism.js only while the search box has a query and it
+  // matched nothing anywhere in the "Pages" nav.
+  .prism-nav-empty {
+    display: none;
+    padding: 8px 12px;
+    color: $prism-text-muted;
+    font-size: 0.85em;
+
+    &.prism-nav-empty-visible {
+      display: block;
+    }
   }
 
   .prism-sidebar-utility {
@@ -385,7 +471,8 @@ body:not(.prism-sidebar-footer-disabled) #footer {
       transition: transform $prism-transition-fast;
     }
 
-    &.open > .prism-nav-group-toggle .prism-chevron {
+    &.open > .prism-nav-group-toggle .prism-chevron,
+    &.prism-search-open > .prism-nav-group-toggle .prism-chevron {
       transform: rotate(180deg);
     }
 
@@ -396,12 +483,19 @@ body:not(.prism-sidebar-footer-disabled) #footer {
       display: none;
     }
 
-    &.open > .prism-nav-submenu {
+    &.open > .prism-nav-submenu,
+    &.prism-search-open > .prism-nav-submenu {
       display: block;
     }
 
     &.has-children > .prism-nav-submenu .prism-nav-item > .prism-nav-link {
       font-size: 0.88em;
+    }
+
+    // Set by js-src/prism.js while the sidebar search box has a query and
+    // neither this item's own label nor any descendant's matches it.
+    &.prism-nav-hidden {
+      display: none;
     }
   }
 

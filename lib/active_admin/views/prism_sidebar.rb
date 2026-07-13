@@ -42,9 +42,11 @@ module ActiveAdmin
         div class: "prism-sidebar-inner" do
           div(class: "prism-sidebar-brand") { site_title @namespace }
           render_language_switcher if ActiveAdminPrism.configuration.language_switcher
+          render_search_box if ActiveAdminPrism.configuration.menu_search
           div(class: "prism-sidebar-scroll") do
             div "Pages", class: "prism-nav-section-label"
             render_menu @menu, class: "prism-nav"
+            div("No matching menu items", class: "prism-nav-empty")
           end
           if @utility_menu.items.any?
             div(class: "prism-sidebar-utility") do
@@ -107,6 +109,30 @@ module ActiveAdmin
                 text_node helpers.link_to(lang[:label], language_url(lang), class: classes.join(" "))
               end
             end
+          end
+        end
+      end
+
+      # A text input that filters the "Pages" nav below as the visitor
+      # types (see js-src/prism.js) — matching happens purely client-side,
+      # against every item's own label regardless of nesting level, so a
+      # long menu with several submenus doesn't force a scroll to find one
+      # item. The actual show/hide + submenu auto-expand logic lives in JS
+      # because the whole menu is already rendered up front here; there's
+      # nothing server-side left to decide once the markup exists.
+      def render_search_box
+        div(class: "prism-sidebar-search") do
+          text_node ActiveAdminPrism::Icons.svg(:search, css_class: "prism-nav-icon prism-search-icon").html_safe
+          input(
+            type: "search",
+            class: "prism-nav-search-input",
+            placeholder: "Search menu",
+            autocomplete: "off",
+            "aria-label": "Search menu",
+            data: { "prism-nav-search": true }
+          )
+          span(class: "prism-nav-search-clear", data: { "prism-nav-search-clear": true }, "aria-label": "Clear search") do
+            text_node ActiveAdminPrism::Icons.svg(:x, css_class: "prism-nav-icon").html_safe
           end
         end
       end
