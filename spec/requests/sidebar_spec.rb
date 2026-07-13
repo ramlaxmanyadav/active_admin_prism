@@ -20,6 +20,23 @@ RSpec.describe "Prism sidebar", type: :request do
     expect(response.body).to include("Active Admin")
   end
 
+  it "renders a menu search box above the Pages nav by default" do
+    get "/admin"
+
+    expect(response.body).to include('class="prism-sidebar-search"')
+    expect(response.body).to include('data-prism-nav-search="true"')
+  end
+
+  context "when config.menu_search is false" do
+    before { ActiveAdminPrism.configure { |c| c.menu_search = false } }
+
+    it "does not render the search box" do
+      get "/admin"
+
+      expect(response.body).not_to include('class="prism-sidebar-search"')
+    end
+  end
+
   context "when config.sidebar_footer is false" do
     before { ActiveAdminPrism.configure { |c| c.sidebar_footer = false } }
 
