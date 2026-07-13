@@ -1,7 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
+- A search box renders at the top of the sidebar's "Pages" nav
+  (`config.menu_search`, default `true`), filtering menu items as you
+  type without a server round trip. Matching works at any nesting depth:
+  a submenu item that matches keeps its parent group visible and expanded
+  even though the parent's own label doesn't match; a parent whose own
+  label matches instead reveals its entire submenu, expanded, so you
+  never have to manually open a group to find something buried in a long
+  menu. Clearing the box (or the "x" button, or Escape) resets everything
+  back to its normal expand/collapse state.
 - **The shipped `prism.css`/`prism.js` are now minified.** `bin/build-css`
   compiles with `style: :compressed` instead of `:expanded`, and a new
   `bin/build-js` (backed by the `terser` dev dependency) minifies the real
