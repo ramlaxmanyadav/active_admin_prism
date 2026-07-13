@@ -29,7 +29,6 @@ period of inactivity can take up to a minute while the instance spins up.
 - Ruby `>= 3.1`
 
 ## Install
-
 Add to your Gemfile:
 
 ```ruby
