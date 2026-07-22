@@ -365,3 +365,31 @@
     });
   });
 })();
+
+// Auto-enhances every plain <select> ActiveAdmin renders (filters, form
+// inputs, association pickers) into a searchable Select2 widget when
+// ActiveAdminPrism.configuration.select2 is true (the
+// "prism-select2-enabled" body class, set in
+// lib/active_admin/views/flash_messages.rb#body_classes). Select2 itself
+// (vendor/select2/select2.full.min.js, MIT licensed) is concatenated just
+// above this file in the compiled asset (see bin/build-js) — turning this
+// flag on needs no host-side JS/npm setup of its own. Skips any <select>
+// a host already initialized manually (the per-field
+// input_html: { class: "..." } + own .select2() call approach predating
+// this flag, still documented in INTEGRATION.md) so the two can coexist
+// without double-initializing the same element.
+(function () {
+  "use strict";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!document.body.classList.contains("prism-select2-enabled")) return;
+    if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
+
+    var $ = jQuery;
+    $("select").each(function () {
+      var $select = $(this);
+      if ($select.data("select2")) return;
+      $select.select2({ width: "100%" });
+    });
+  });
+})();

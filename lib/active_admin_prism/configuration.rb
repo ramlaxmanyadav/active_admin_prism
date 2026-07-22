@@ -149,6 +149,18 @@ module ActiveAdminPrism
     # all.
     attr_accessor :menu_search
 
+    # Whether every plain <select> ActiveAdmin renders (filters, form
+    # inputs, association pickers — anything, no per-field opt-in needed)
+    # is automatically enhanced into a searchable Select2 widget. false
+    # (the default) leaves every select exactly as ActiveAdmin renders it;
+    # you can still opt individual fields into Select2 yourself either way
+    # (see INTEGRATION.md's Select2 section) — this flag only controls the
+    # blanket, no-setup-needed behavior. Select2 itself (JS + its own base
+    # CSS) ships vendored inside this gem's assets either way — turning
+    # this on requires no extra gem/npm dependency or JS of your own;
+    # see js-src/prism.js and vendor/select2/.
+    attr_accessor :select2
+
     def initialize
       @sidebar = true
       @colorize_action_icons = true
@@ -170,6 +182,7 @@ module ActiveAdminPrism
         { label: "Français", locale: :fr }
       ]
       @menu_search = true
+      @select2 = false
     end
   end
 

@@ -162,12 +162,28 @@ form {
     }
   }
 
+  // ActiveAdmin's own CSS lays these out via `float: left` on each `li`
+  // (mixins/_buttons.scss's basic-button + _forms.scss's `fieldset.buttons
+  // li, fieldset.actions li { float: left; }`) — fragile in practice: it
+  // only takes one host app's own CSS reset (or a form with an unusually
+  // long submit label, or a differently-structured actions bar) for that
+  // float to be lost, at which point every `li` (a block-level list item
+  // by default) stacks vertically instead of sitting in a row. Flexbox
+  // sidesteps this rather than trying to out-specificity AA's float rule:
+  // per spec, `float` has no effect on a flex item at all, so this simply
+  // wins outright regardless of load order/specificity, and doesn't
+  // depend on every button happening to fit on one line the way floats do.
   .buttons,
   .actions {
-    input[type="submit"],
-    input[type="button"],
-    button {
-      margin-right: 10px;
+    > ol {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    li {
+      padding: 0;
     }
   }
 }

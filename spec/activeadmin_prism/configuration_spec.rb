@@ -30,6 +30,10 @@ RSpec.describe ActiveAdminPrism::Configuration do
     it "defaults login_tagline to a friendly sentence" do
       expect(config.login_tagline).to eq("Sign in to your admin dashboard")
     end
+
+    it "defaults select2 to off (opt-in, unlike the other feature flags)" do
+      expect(config.select2).to be false
+    end
   end
 
   describe ".configuration" do
