@@ -132,6 +132,7 @@ ActiveAdminPrism.configure do |config|
     { label: "Français", locale: :fr }
   ]
   config.menu_search = true                # default: true
+  config.select2 = false                   # default: false (opt-in — see below)
 end
 
 ActiveAdminPrism.enable!
@@ -155,6 +156,7 @@ ActiveAdminPrism.enable!
 | `language_switcher`              | `true`  | No "Languages" dropdown renders in the sidebar at all — see [Language switcher](#language-switcher). |
 | `languages`                      | 3 entries (English/Español/Français) | The list the dropdown renders; an empty array (`[]`) has the same effect as `language_switcher = false`. |
 | `menu_search`                    | `true`  | No search box renders above the sidebar's "Pages" nav — see [Menu search](#menu-search). |
+| `select2`                        | `false` | **Opposite polarity from every other flag above — opt-in, not opt-out.** `false` (the default) leaves every `<select>` exactly as ActiveAdmin renders it. `true` auto-enhances *every* plain `<select>` (filters, form inputs, association pickers — no per-field setup) into a searchable Select2 widget — see [Select2](#select2). |
 
 **How this crosses the server/client boundary.** `sidebar`,
 `colorize_action_icons`, and the `login_*` flags are pure server-side
@@ -496,6 +498,92 @@ end
 
 Explicit opt-in per column/row — ActiveAdmin's default `status_tag`
 "Yes"/"No" pill is untouched everywhere you don't call it.
+
+### Select2
+
+Prism reskins [Select2](https://select2.org) — the jQuery widget that makes
+a `<select>` searchable — and ships it vendored inside its own assets
+(`vendor/select2`, MIT licensed), so there's no separate gem/npm dependency
+or JS of your own to add either way. Two ways to use it:
+
+**1. Every select, automatically — `config.select2 = true`.** Opt-in
+(default `false`, the only flag in this gem with that polarity — see
+[Configuration reference](#configuration-reference)):
+
+```ruby
+ActiveAdminPrism.configure do |config|
+  config.select2 = true
+end
+```
+
+With this on, *every* plain `<select>` ActiveAdmin renders — filters, form
+inputs, association pickers, ransack predicate dropdowns, date-part
+selects, all of it, no per-field setup — becomes a searchable Select2
+widget. There's no way to exclude individual selects from this today; if
+you only want it on specific fields, use the next approach instead.
+
+**2. Specific fields only — bring your own `.select2()` call.** Leave
+`config.select2` at its default `false` and initialize Select2 yourself,
+the same way you would in any other Rails app (this still works whether or
+not you also load your own separate copy of Select2 — Prism's vendored
+copy and a host's own don't conflict, they just both define
+`jQuery.fn.select2` and the last one loaded wins, harmlessly):
+
+```ruby
+# app/admin/teachers.rb
+filter :subject, input_html: { class: "your-select2-class" }
+
+form do |f|
+  f.input :subject, input_html: { class: "your-select2-class" }
+end
+```
+
+```js
+$(".your-select2-class").select2({ width: "100%" })
+```
+
+Either way, any element Select2 replaces picks up Prism's border/radius/
+focus-ring styling automatically, matching every other input in the
+theme; its open dropdown (search box, results list) is styled to match
+Prism's popover look — see [Select2 markup](#select2-markup) for the
+class reference. The auto-init (approach 1) skips any `<select>` a host
+already initialized manually (approach 2) — see `js-src/prism.js` — so
+the two can coexist: turn `config.select2` on globally and still hand-roll
+one particular field's Select2 options (`tags: true`, a custom
+`ajax:`, etc.) yourself, since your own `.select2()` call runs first and
+the auto-init recognizes it's already initialized.
+
+**Multi-select ("tags") mode** — e.g. a `has_many`/`has_and_belongs_to_many`
+association — is themed too, as pill-shaped chips instead of Select2's own
+default boxed/absolute-positioned look:
+
+```ruby
+f.input :subjects, as: :select, multiple: true, input_html: { class: "your-select2-class" }, collection: Subject.all
+```
+
+Everything above (width handling, dropdown styling) applies the same way
+regardless of single/multiple mode, and regardless of which of the two
+approaches initialized it.
+
+**Why width behaves differently in the sidebar Filters panel vs. a form.**
+The Filters panel and standalone filter forms stack each field's label
+above it (no float), so Select2 renders at a flat `width: 100%` there,
+matching `.sidebar_section select`'s own width rule. A `fieldset.inputs`
+form (the main new/edit form) instead floats the label to the *left* and
+gives text inputs an explicit `calc(80% - padding)` width so they sit
+beside it — a padding value this gem has no access to at compile time
+(its CSS is compiled standalone from `scss-src/*.scss`, without
+ActiveAdmin's own Sass variables in its load path; see
+[Customizing colors](#customizing-colors)). Rather than hardcode an
+equivalent, Prism gives the field its own block formatting context
+(`overflow: hidden`, no explicit width) there instead — the CSS spec
+requires a box like that not to overlap a preceding float's box, so the
+browser sizes it to exactly the remaining space automatically, no magic
+number needed. If you render a Select2 field somewhere using neither of
+these two layout conventions, you may need your own `width`/`overflow`
+override alongside it — without one, a full-width Select2 box will render
+*underneath* a floated label rather than beside it, visually hiding the
+label.
 
 ### Row-level action icons
 
@@ -848,6 +936,39 @@ span.prism-toggle-tag[.on/.off]
 read-only tag — same pill/thumb CSS, driven by a sibling `:checked`
 selector in the form case and by the `.on`/`.off` class in the read-only
 case (there's no real `<input>` on an index/show page).
+
+### Select2 markup
+
+Only rendered if your app's own JS actually calls `.select2()` on an
+element — see [Select2](#select2). This is
+Select2's own markup, reskinned by targeting its own class names, not
+anything Prism itself renders:
+
+```
+.select2-container                          <- replaces the original (now hidden) <select>
+  .select2-selection--single                <- single-select: the visible closed-state box
+    .select2-selection__rendered            <- selected option's text
+    .select2-selection__placeholder
+    .select2-selection__arrow
+    .select2-selection__clear               <- the "x" clear button (allowClear: true)
+  .select2-selection--multiple              <- multiple: true instead — a row of pill "chips"
+    .select2-selection__rendered
+      li.select2-selection__choice          <- one per selected option
+        .select2-selection__choice__display <- its label text
+        .select2-selection__choice__remove  <- its own "x" remove button
+    .select2-search--inline
+      input.select2-search__field           <- the free-typing search box inline with the chips
+  [.select2-container--open]                <- while its dropdown is open
+  [.select2-container--focus]               <- multiple mode: while focused (not necessarily open)
+  [.select2-container--disabled]
+
+.select2-dropdown                           <- the open dropdown, appended to <body> (or `dropdownParent`)
+  .select2-search--dropdown
+    input.select2-search__field             <- the built-in search box
+  ul.select2-results
+    li.select2-results__option[.select2-results__option--highlighted][aria-selected="true"]
+    li.select2-results__message             <- "No results found" etc.
+```
 
 ### Filters sidebar panel (`#filters_sidebar_section`)
 

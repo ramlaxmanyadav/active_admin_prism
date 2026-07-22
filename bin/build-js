@@ -9,17 +9,29 @@
 # See bin/build-css's own comment for why shipping pre-minified assets
 # matters even though Sprockets hosts would otherwise re-minify on their
 # own `assets:precompile` — Propshaft hosts have no such step at all.
+#
+# vendor/select2/select2.full.min.js (Select2 v4.1.0, MIT licensed — see
+# vendor/select2/LICENSE.md) is prepended as-is: it's already minified
+# upstream, and it's plain browser-global UMD (falls through to
+# `factory(jQuery)` when neither AMD's `define` nor a real CommonJS
+# `module.exports` is present, which is exactly Sprockets/Propshaft's
+# plain-`<script>` loading context) — no build step of its own needed,
+# just concatenation ahead of our own code so ActiveAdminPrism.configuration
+# #select2's auto-init (ActiveAdminPrism.configuration#select2, in
+# prism.js below) finds jQuery.fn.select2 already defined.
 
 require "terser"
 require "fileutils"
 
 root = File.expand_path("..", __dir__)
+vendor_select2 = File.join(root, "vendor", "select2", "select2.full.min.js")
 src = File.join(root, "js-src", "prism.js")
 dest_dir = File.join(root, "app", "assets", "javascripts", "active_admin_prism")
 dest = File.join(dest_dir, "prism.js")
 
 minified = Terser.compile(File.read(src), comments: :none)
+combined = "#{File.read(vendor_select2)}\n#{minified}"
 
 FileUtils.mkdir_p(dest_dir)
-File.write(dest, minified)
+File.write(dest, combined)
 puts "Built #{dest} (#{File.size(dest)} bytes)"
