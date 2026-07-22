@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.2
+
+- Adds [Select2](https://select2.org) support (`config.select2`, default
+  `false` — the only opt-in-by-default flag in this gem) — reskinned to
+  match the theme, and now vendored inside the gem's own assets (no
+  separate gem/npm dependency, no JS of your own required). Turn it on to
+  auto-enhance *every* plain `<select>` (filters, form inputs, association
+  pickers) into a searchable widget with zero per-field setup; or leave it
+  off and opt individual fields in yourself the same way you would in any
+  other Rails app (`input_html: { class: "..." }` + your own `.select2()`
+  call) — both approaches coexist without double-initializing the same
+  element. Covers single-select, multi-select ("tags"/pill chips), and the
+  open dropdown/search box/results list — see
+  [Select2](INTEGRATION.md#select2) in INTEGRATION.md. Without the CSS
+  half of this, a Select2-enhanced select rendered at its tiny unstyled
+  default size, and its open dropdown could clash with the theme entirely.
+- Fixed: the collapsible Filters sidebar panel kept `overflow: hidden`
+  even while expanded, clipping/garbling any dropdown (Select2 or AA's own
+  "select + search" filter widget) that needed to render outside its own
+  input's bounds. `&.open`/the `collapsible_filters: false` backstop now
+  reset `overflow` back to `visible`.
+- Fixed: the Cancel button (and any other `fieldset.actions`/
+  `fieldset.buttons` link styled via `prism-button-secondary`) rendered
+  with ActiveAdmin's own pill-shaped `border-radius: 200px` instead of
+  Prism's — a more specific AA selector was winning on that one property
+  even though Prism's color/background already won via `!important`. Both
+  button mixins now mark `border-radius` `!important` too.
+- Fixed: form action buttons (Create/Update + Cancel) could stack
+  vertically instead of sitting side by side. ActiveAdmin lays them out
+  via `float: left` on each `<li>`, which is fragile (a longer button
+  label, or a host's own CSS, can lose the float); the actions `<ol>` is
+  now a flex row instead, which floats have no effect on regardless of
+  specificity or content width.
+
 ## 0.1.1
 
 - A search box renders at the top of the sidebar's "Pages" nav

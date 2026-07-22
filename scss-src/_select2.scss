@@ -1,0 +1,264 @@
+// Reskins Select2 (https://select2.org) — the jQuery widget commonly wired
+// up for searchable belongs_to filters/inputs (host apps opt individual
+// selects in with `input_html: { class: "your-select2-class" }` plus their
+// own `.select2()` call; this gem does not ship the JS itself, only the
+// CSS, since Select2 is an opt-in add-on rather than something AA bundles).
+//
+// Select2 replaces the (now hidden) <select> with its own
+// `.select2-container` markup, so the plain `select { ... }` rules in
+// _forms.scss (and the `.sidebar_section select` / `.filter_form_field`
+// width rules) never reach it — every width/sizing/theming rule the
+// original select relied on needs a `.select2-container` equivalent here.
+// Without this file, a Select2-enhanced select renders at its unstyled
+// default size (far narrower than the surrounding fields) and its open
+// dropdown can visually clash with the theme entirely.
+.select2-container {
+  display: block;
+  font-family: $prism-font-family;
+
+  .select2-selection--single {
+    height: auto;
+    border: 1px solid $prism-border-color-strong;
+    border-radius: $prism-radius-sm;
+    background: $prism-bg-card;
+    padding: 9px 32px 9px 12px;
+    transition: border-color $prism-transition-fast, box-shadow $prism-transition-fast;
+
+    .select2-selection__rendered {
+      padding: 0;
+      color: $prism-text-heading;
+      line-height: 1.4;
+    }
+
+    .select2-selection__placeholder {
+      color: $prism-text-muted;
+    }
+
+    .select2-selection__arrow {
+      height: 100%;
+      top: 0;
+      right: 8px;
+
+      b {
+        border-color: $prism-text-muted transparent transparent transparent;
+      }
+    }
+  }
+
+  &--open .select2-selection--single {
+    border-color: $prism-color-primary;
+    box-shadow: 0 0 0 3px rgba($prism-color-primary, 0.15);
+
+    .select2-selection__arrow b {
+      border-color: transparent transparent $prism-text-muted transparent;
+    }
+  }
+
+  &--disabled .select2-selection--single {
+    background: $prism-bg-page;
+    color: $prism-text-muted;
+    cursor: not-allowed;
+  }
+
+  .select2-selection__clear {
+    position: static;
+    margin: 0 4px 0 0;
+    height: auto;
+    color: $prism-text-muted;
+    font-weight: 700;
+
+    &:hover {
+      color: $prism-color-danger;
+    }
+  }
+
+  // Multi-select ("tags") mode — e.g. `f.input :subjects, as: :select2,
+  // multiple: true` in place of `as: :check_boxes`. Select2's own default
+  // theme lays this out with absolute-positioned remove buttons and
+  // per-choice margins (see its own select2-selection--multiple rules) —
+  // overridden wholesale here with a flex-wrapped row of pill chips,
+  // consistent with the toggle/badge look elsewhere in this theme, rather
+  // than patched piecemeal on top of that positioning.
+  .select2-selection--multiple {
+    min-height: auto;
+    border: 1px solid $prism-border-color-strong;
+    border-radius: $prism-radius-sm;
+    background: $prism-bg-card;
+    padding: 6px 8px;
+    cursor: text;
+    transition: border-color $prism-transition-fast, box-shadow $prism-transition-fast;
+
+    .select2-selection__rendered {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 0;
+    }
+
+    .select2-selection__placeholder {
+      color: $prism-text-muted;
+    }
+
+    .select2-selection__choice {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: static;
+      max-width: 100%;
+      margin: 0;
+      padding: 3px 6px 3px 10px;
+      border: none;
+      border-radius: $prism-radius-pill;
+      background: $prism-color-primary-light;
+      overflow: hidden;
+    }
+
+    .select2-selection__choice__display {
+      padding: 0;
+      color: $prism-color-primary-dark;
+      font-weight: 600;
+      font-size: 0.85em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .select2-selection__choice__remove {
+      position: static;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: $prism-color-primary-dark;
+      font-weight: 700;
+      line-height: 1;
+      padding: 2px;
+
+      &:hover,
+      &:focus {
+        background: rgba($prism-color-primary-dark, 0.15);
+        color: $prism-color-primary-dark;
+        outline: none;
+      }
+    }
+
+    .select2-selection__clear {
+      position: static;
+      margin: 0 0 0 auto;
+      height: auto;
+      color: $prism-text-muted;
+      font-weight: 700;
+
+      &:hover {
+        color: $prism-color-danger;
+      }
+    }
+
+    .select2-search--inline .select2-search__field {
+      margin: 0;
+      padding: 3px 2px;
+      min-height: 0;
+      height: auto;
+      color: $prism-text-heading;
+      font-family: $prism-font-family;
+    }
+  }
+
+  &--focus .select2-selection--multiple,
+  &--open .select2-selection--multiple {
+    border-color: $prism-color-primary;
+    box-shadow: 0 0 0 3px rgba($prism-color-primary, 0.15);
+  }
+
+  &--disabled .select2-selection--multiple {
+    background: $prism-bg-page;
+
+    .select2-selection__choice {
+      opacity: 0.75;
+    }
+
+    .select2-selection__choice__remove {
+      display: none;
+    }
+  }
+}
+
+// Sidebar Filters panel and the standalone filter form both stack the
+// label above the field (no float) and size the underlying <select> to
+// fill it — same treatment for its Select2 replacement (see the
+// equivalent `select` rules in _forms.scss).
+.sidebar_section .select2-container,
+form.filter_form .select2-container {
+  width: 100% !important;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+form.filter_form .filter_form_field.select_and_search .select2-container {
+  width: auto !important;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+// Main "fieldset.inputs" form: ActiveAdmin's own _forms.scss floats the
+// label left at 20% width and gives text inputs an explicit
+// width: calc(80% - padding) so they sit in the remaining space beside it
+// — a value this gem has no access to at compile time (it's compiled
+// standalone, without AA's own SCSS variables/mixins in its load path; see
+// bin/build-css). Rather than hardcode an equivalent, giving the container
+// its own block formatting context (overflow: hidden, no explicit width)
+// gets the same result for free: per the CSS spec, a BFC-establishing box
+// must not overlap a preceding float's margin box, so the browser sizes it
+// to exactly the remaining space automatically. Without this, the default
+// 100% width above would render full-width *underneath* the floated
+// label, visually painting over it — this is the fix for that, not just a
+// visual nicety.
+fieldset.inputs .select2-container {
+  overflow: hidden;
+}
+
+// The dropdown panel itself is appended to <body> (or wherever
+// `dropdownParent` points), not inside the field/panel — its own popover
+// styling, independent of whatever container it happens to render in.
+.select2-dropdown {
+  border: 1px solid $prism-border-color;
+  border-radius: $prism-radius-sm;
+  box-shadow: $prism-shadow-popover;
+  overflow: hidden;
+}
+
+.select2-search--dropdown {
+  padding: 8px;
+
+  .select2-search__field {
+    border: 1px solid $prism-border-color-strong;
+    border-radius: $prism-radius-sm;
+    padding: 7px 10px;
+    color: $prism-text-heading;
+
+    &:focus {
+      border-color: $prism-color-primary;
+      box-shadow: 0 0 0 3px rgba($prism-color-primary, 0.15);
+    }
+  }
+}
+
+.select2-results__option {
+  padding: 8px 12px;
+  color: $prism-text-body;
+
+  &--highlighted {
+    background: $prism-color-primary-light !important;
+    color: $prism-color-primary-dark !important;
+  }
+
+  &[aria-selected="true"] {
+    background: $prism-bg-page;
+    color: $prism-text-heading;
+    font-weight: 600;
+  }
+}
+
+.select2-results__message {
+  color: $prism-text-muted;
+  padding: 8px 12px;
+}
