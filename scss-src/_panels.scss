@@ -156,6 +156,15 @@ body:has(.prism-collapsible-panel):not(.prism-filters-open) {
   }
 
   &.open {
+    // Both this element and .panel_contents inherit overflow:hidden from
+    // the collapsed state above (needed there to clip the height-0
+    // content and, on .panel itself, to keep the base .panel rule's
+    // rounded-corner clipping) — reset to visible once open, otherwise a
+    // filter using a Select2 dropdown (e.g. a belongs_to filter's
+    // .select_and_search field) gets its open dropdown list clipped/
+    // garbled against this panel's own bounds, since Select2 renders its
+    // dropdown as a sibling near the input rather than inside it.
+    overflow: visible;
     background: $prism-bg-card;
     border-color: $prism-border-color;
     box-shadow: $prism-shadow-card;
@@ -186,6 +195,7 @@ body:has(.prism-collapsible-panel):not(.prism-filters-open) {
     }
 
     .panel_contents {
+      overflow: visible;
       max-height: 1200px;
       opacity: 1;
       padding-top: 20px;
@@ -200,6 +210,7 @@ body:has(.prism-collapsible-panel):not(.prism-filters-open) {
 // filters_sidebar.rb skips adding the icon/label markup entirely, so this
 // rule is mostly a no-op safety net rather than the primary mechanism).
 body.prism-filters-collapsible-disabled .prism-collapsible-panel {
+  overflow: visible;
   background: $prism-bg-card;
   border-color: $prism-border-color;
   box-shadow: $prism-shadow-card;

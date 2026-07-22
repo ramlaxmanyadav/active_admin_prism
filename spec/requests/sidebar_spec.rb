@@ -52,4 +52,20 @@ RSpec.describe "Prism sidebar", type: :request do
       expect(response.body).to match(/<body[^>]*\bprism-sidebar-footer-disabled\b/)
     end
   end
+
+  it "does not add the prism-select2-enabled body class by default" do
+    get "/admin"
+
+    expect(response.body).not_to include("prism-select2-enabled")
+  end
+
+  context "when config.select2 is true" do
+    before { ActiveAdminPrism.configure { |c| c.select2 = true } }
+
+    it "adds the prism-select2-enabled body class" do
+      get "/admin"
+
+      expect(response.body).to match(/<body[^>]*\bprism-select2-enabled\b/)
+    end
+  end
 end

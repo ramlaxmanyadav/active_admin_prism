@@ -47,10 +47,11 @@ module ActiveAdmin
 
         # Read by prism.js / scss-src's CSS to decide whether to route
         # data-confirm links through the styled dialog, whether the Filters
-        # sidebar panel collapses to an icon, and whether ActiveAdmin's
-        # original #footer should stay hidden (see
+        # sidebar panel collapses to an icon, whether ActiveAdmin's
+        # original #footer should stay hidden, and whether every plain
+        # <select> should be auto-enhanced into Select2 (see
         # ActiveAdminPrism::Configuration #styled_confirms /
-        # #collapsible_filters / #sidebar_footer).
+        # #collapsible_filters / #sidebar_footer / #select2).
         #
         # Can't call `super` here — #body_classes is defined directly on
         # this same class (not a superclass), so reopening and redefining
@@ -69,6 +70,7 @@ module ActiveAdmin
           classes << "prism-styled-confirms-disabled" unless config.styled_confirms
           classes << "prism-filters-collapsible-disabled" unless config.collapsible_filters
           classes << "prism-sidebar-footer-disabled" unless config.sidebar_footer
+          classes << "prism-select2-enabled" if config.select2
           classes
         end
       end

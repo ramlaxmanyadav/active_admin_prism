@@ -117,6 +117,7 @@ ActiveAdminPrism.configure do |config|
     { label: "Français", locale: :fr }
   ]
   config.menu_search = true             # search box that filters the sidebar's Pages nav
+  config.select2 = false                # default: false — auto-enhance every <select> into Select2
 end
 
 ActiveAdminPrism.enable!
@@ -232,6 +233,35 @@ end
 It's an explicit opt-in per column/row (like everything else in Prism) —
 ActiveAdmin's default boolean rendering is untouched everywhere you don't
 call it.
+
+## Select2
+
+Prism reskins [Select2](https://select2.org) — the jQuery widget that makes
+a `<select>` searchable — and ships it vendored inside its own assets, so
+there's no separate gem/npm dependency to add. Turn it on for every select,
+no per-field setup:
+
+```ruby
+ActiveAdminPrism.configure do |config|
+  config.select2 = true   # default: false — opt-in, unlike every other flag
+end
+```
+
+...or leave that off and opt individual fields in yourself instead, same as
+you would in any other Rails app:
+
+```ruby
+filter :subject, input_html: { class: "your-select2-class" }
+# or: f.input :subject, input_html: { class: "your-select2-class" }
+```
+
+```js
+$(".your-select2-class").select2({ width: "100%" })
+```
+
+See [INTEGRATION.md](INTEGRATION.md#select2) for how the two approaches
+coexist, and why the sidebar Filters panel and a main form need different
+`width` handling under the hood.
 
 ## Sign-in page
 
