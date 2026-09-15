@@ -116,6 +116,7 @@ ActiveAdminPrism.configure do |config|
   config.colorize_action_icons = true      # default: true
   config.styled_confirms = true            # default: true
   config.collapsible_filters = true        # default: true
+  config.active_filters_bar = true         # default: true
   config.sidebar_footer = true             # default: true
   config.flash_dismissible = true          # default: true
   config.flash_auto_dismiss = true         # default: true
@@ -133,6 +134,7 @@ ActiveAdminPrism.configure do |config|
   ]
   config.menu_search = true                # default: true
   config.select2 = false                   # default: false (opt-in — see below)
+  config.sidebar_collapsible = true        # default: true
 end
 
 ActiveAdminPrism.enable!
@@ -144,6 +146,7 @@ ActiveAdminPrism.enable!
 | `colorize_action_icons`          | `true`  | Index-table View/Edit/Delete render as ActiveAdmin's plain text links instead of color-coded icon buttons. |
 | `styled_confirms`                | `true`  | Row-level `data-confirm` links (View/Edit/Delete, or anything else using Rails UJS's `data-confirm`) fall back to the browser's native `confirm()`. Batch Actions confirms are unaffected either way — they always use ActiveAdmin's own dialog. |
 | `collapsible_filters`            | `true`  | The "Filters" sidebar panel always renders fully expanded (ActiveAdmin's own default) instead of collapsing to a single icon button that expands on click. |
+| `active_filters_bar`             | `true`  | The current scope/active-filters summary renders inside `#sidebar` as its own panel (ActiveAdmin's own default) instead of as a highlighted bar beside Batch Actions — see [Active filters bar](#active-filters-bar). |
 | `sidebar_footer`                 | `true`  | "Powered by Active Admin" (or your own `config.footer`) stays in ActiveAdmin's original page-level `#footer` instead of moving into the sidebar. |
 | `flash_dismissible`              | `true`  | Flash messages render as ActiveAdmin's original plain `<div>` (no dismiss button). |
 | `flash_auto_dismiss`             | `true`  | Flash messages stay on screen until the next page load (ActiveAdmin's default) instead of disappearing on their own. |
@@ -157,6 +160,7 @@ ActiveAdminPrism.enable!
 | `languages`                      | 3 entries (English/Español/Français) | The list the dropdown renders; an empty array (`[]`) has the same effect as `language_switcher = false`. |
 | `menu_search`                    | `true`  | No search box renders above the sidebar's "Pages" nav — see [Menu search](#menu-search). |
 | `select2`                        | `false` | **Opposite polarity from every other flag above — opt-in, not opt-out.** `false` (the default) leaves every `<select>` exactly as ActiveAdmin renders it. `true` auto-enhances *every* plain `<select>` (filters, form inputs, association pickers — no per-field setup) into a searchable Select2 widget — see [Select2](#select2). |
+| `sidebar_collapsible`             | `true`  | No hamburger toggle button renders next to the brand — the sidebar is always full width, with no way to collapse it to an icon-only rail. Desktop-only either way; the mobile off-canvas toggle is unaffected — see [Collapsible sidebar rail](#collapsible-sidebar-rail). |
 
 **How this crosses the server/client boundary.** `sidebar`,
 `colorize_action_icons`, and the `login_*` flags are pure server-side
@@ -287,6 +291,23 @@ passes this hash through untouched) accepts: `:dashboard`, `:users`,
 `:cart`, `:box`, `:receipt`, `:credit_card`, `:message`, `:settings`,
 `:home`, `:list`, `:folder`, `:bell`, `:search`, `:menu`, `:logout`,
 `:check`, `:x`, `:chevron_down`, `:eye`, `:pencil`, `:trash`, `:filter`.
+
+### Collapsible sidebar rail
+
+A hamburger icon button next to the brand, at the top of the sidebar,
+collapses it to a narrow icon-only rail — labels, the search box, language
+switcher, and section headings all hide, leaving just the icons (each
+still identifiable via a native tooltip on hover). Clicking again expands
+it back to full width. The choice persists across page loads
+(`localStorage`, like the per-group nav expand/collapse state already
+does). Desktop-only: below the 900px mobile breakpoint the sidebar is
+already off-canvas (a full-width drawer toggled by its own separate
+hamburger button, `.prism-sidebar-mobile-toggle`), and collapsing to a
+rail there wouldn't make sense — this toggle has no effect on that
+behavior either way. Turn it off with
+`config.sidebar_collapsible = false` to remove the toggle entirely (the
+sidebar is then always full width, ActiveAdmin's own implicit default
+before this flag existed).
 
 ### Parent groups & submenus (nested navigation)
 
@@ -617,12 +638,46 @@ The reflow relies on the CSS `:has()` selector (broadly supported in
 current browsers); without it, the Filters panel still collapses/expands
 correctly, it just won't reclaim the extra width.
 
+### Active filters bar
+
+Once at least one filter or scope is active, a summary ("Scope: All",
+"Bank code contains BCA", etc.) renders as a highlighted pill bar in the
+same row as the Batch Actions button/scope tabs (AA core's own
+`.table_tools`, pushed to the row's far end), instead of inside
+ActiveAdmin's own `#sidebar` as its own panel. Tinted with the theme's
+primary color (a colored left border + tinted background, distinct from
+the plain gray panels elsewhere) so an active filter reads as a clear,
+eye-catching signal rather than blending in as more chrome. It's also
+clickable — clicking anywhere on it opens the Filters panel (expanding it
+if `collapsible_filters` has it collapsed) and scrolls it into view,
+a shortcut to editing the filters currently producing this exact result
+set, rather than only the separate funnel icon doing that. This is also
+the fix for that sidebar summary overflowing out whenever the collapsible
+Filters panel (above) is collapsed to its 72px icon gutter — there's
+nowhere in 72px for a sentence-length filter description to fit. Turn it
+off with `config.active_filters_bar = false` to restore ActiveAdmin's own
+stock sidebar-based rendering (only sensible if `collapsible_filters` is
+also `false`, since otherwise the two flags combined bring the overflow
+back).
+
 ### Flash messages
 
-Flash messages get a dismiss button, auto-hide after a configurable delay,
-and fade/slide out with a smooth, configurable transition — see
-[Configuration reference](#configuration-reference) for
-`flash_dismissible`, `flash_auto_dismiss(_seconds)`, and
+Flash messages render as floating toast cards, pinned to the top-right
+corner of the viewport (stacking if more than one is active) instead of
+ActiveAdmin's plain inline banner — a type-colored icon
+(`:check_circle`/`:alert_triangle`/`:alert_circle`/`:info` depending on
+the flash key: `:notice`/`:success`, `:alert`/`:warning`, `:error`, and
+anything else respectively), the message, a dismiss button, and — while
+`flash_auto_dismiss` is on — a countdown bar along the card's bottom edge
+that visually empties out over `flash_auto_dismiss_seconds`, pausing
+(along with the actual auto-dismiss timer, not just its own animation) as
+long as the pointer is over the card, so a flash a visitor is mid-read
+never vanishes out from under them. Fades/slides out with a smooth,
+configurable transition on dismiss (manual or automatic) either way. This
+applies identically on Devise's sign-in/password/etc pages — see
+[Flash messages markup](#flash-messages-markup) for why that needed its
+own layout override. See [Configuration reference](#configuration-reference)
+for `flash_dismissible`, `flash_auto_dismiss(_seconds)`, and
 `flash_transition_ms`.
 
 ### Sidebar footer ("Powered by Active Admin")
@@ -765,6 +820,8 @@ Ruby view files under `lib/active_admin/views/`.
   span.prism-sidebar-mobile-toggle       <- hamburger, ≤900px viewports only
   div.prism-sidebar-inner
     div.prism-sidebar-brand
+      span.prism-sidebar-collapse-toggle[role=button][data-prism-toggle-sidebar-collapse]  <- only if config.sidebar_collapsible
+        svg.prism-sidebar-collapse-icon <- the :menu (hamburger) icon
       #site_title                       <- AA's own site_title verb, unchanged
     div.prism-sidebar-lang              <- only if config.language_switcher and #languages is non-empty
     div.prism-sidebar-search            <- only if config.menu_search
@@ -812,8 +869,16 @@ Notes:
   built-in styling of its own beyond what you see in `_sidebar.scss` — it's
   just an example class name, feel free to use your own.
 - Body-level state: `body.prism-sidebar-open` (mobile off-canvas open,
-  toggled by `prism.js`), `body.prism-sidebar-footer-disabled` (set when
-  `config.sidebar_footer` is `false` — see [Configuration reference](#configuration-reference)).
+  toggled by `prism.js`), `body.prism-sidebar-collapsed` (desktop rail
+  collapsed, also toggled by `prism.js` and persisted to `localStorage` —
+  see [Collapsible sidebar rail](#collapsible-sidebar-rail)),
+  `body.prism-sidebar-footer-disabled` (set when `config.sidebar_footer` is
+  `false` — see [Configuration reference](#configuration-reference)).
+- Every `a.prism-nav-link` / `span.prism-nav-group-toggle` also carries a
+  plain `title="<label>"` attribute (a host's own explicit `:title` via
+  `html_options` wins instead) — inert most of the time, but the only way
+  left to identify an item by hovering once `.prism-nav-label` itself is
+  hidden by the rail-collapsed state above.
 
 ### Language switcher markup
 
@@ -995,21 +1060,70 @@ panel) gets the extra icon/collapse markup — any other sidebar section
 `body.prism-filters-collapsible-disabled` is the backstop class that forces
 the panel back to always-expanded.
 
-### Flash messages markup
+### Active filters bar (`#prism_active_filters_bar`)
+
+Only present once at least one filter or scope is active
+(`config.active_filters_bar`, default `true` — see
+[Active filters bar](#active-filters-bar)); reuses ActiveAdmin core's own
+`ActiveAdmin::Views::ActiveFiltersSidebarContent` markup/i18n wholesale, so
+the `h4`/`b`/`ul`/`li` structure below is AA's, not Prism's own:
 
 ```
-.flashes[data-prism-transition-ms][data-prism-auto-dismiss-ms]
-  .flash.flash_notice / .flash_error / .flash_alert [.prism-flash-hide]
+#main_content
+  .index_content
+    .table_tools                                        <- AA core's own — Batch Actions/scope tabs row
+      .table_tools_actions                               <- only if any_table_tools? — wraps the controls AA core itself renders here
+        .dropdown_menu                                    <- Batch Actions button
+        .scopes                                           <- scope tabs, if any are defined
+      #prism_active_filters_bar.prism-active-filters-bar  <- only if a scope/filter is active; pushed to the row's far end
+        h4 + b.current_scope_name                          <- only if a scope is active
+        div
+          h4                                                <- "Current filters:"
+          ul
+            li[class="current_filter_*"]                    <- one per active filter/scope value
+              span                                           <- filter label + predicate
+              b                                               <- the filter's value
+```
+
+### Flash messages markup
+
+Rendered twice over — once from `lib/active_admin/views/flash_messages.rb`
+(Arbre, for every logged-in page) and once, identically, from
+`app/views/layouts/active_admin_logged_out.html.erb` (plain ERB, for
+Devise's sign-in/password/etc pages, which route through a completely
+separate layout ActiveAdmin itself ships rather than through
+`Pages::Base`/Arbre at all — the Ruby-side override alone never reaches
+them, which is why this gem ships a full layout override just for this).
+Both share the same icon-selection logic
+(`ActiveAdminPrism::Icons.flash_icon_name`, in `lib/prism_icons.rb`) and
+duration math (`ActiveAdminPrism::Configuration#flash_auto_dismiss_ms`)
+rather than duplicating either:
+
+```
+.flashes[data-prism-transition-ms][data-prism-auto-dismiss-ms]    <- position: fixed toast stack, top-right
+  .flash.flash_notice / .flash_success / .flash_alert / .flash_warning / .flash_error / .flash_info [.prism-flash-hide]
+    [style="--prism-flash-duration: <ms>"]                         <- only if config.flash_auto_dismiss
+    svg.prism-flash-icon                                           <- :check_circle / :alert_triangle / :alert_circle / :info, by type
     span.prism-flash-message
-    button.prism-flash-dismiss[data-prism-flash-dismiss]   <- only if config.flash_dismissible
+    button.prism-flash-dismiss[data-prism-flash-dismiss]           <- only if config.flash_dismissible
       svg.prism-flash-dismiss-icon
+    div.prism-flash-progress                                       <- only if config.flash_auto_dismiss — the countdown bar
 ```
 
 `flash_notice`/`flash_error`/`flash_alert` are ActiveAdmin's own type
-classes (from `flash_messages.each { |type, ...| }`); Prism just colors
-each one distinctly. `.prism-flash-hide` is added by `prism.js` right
-before removal (opacity/transform transition), timed against the
-`data-prism-transition-ms` attribute — see
+classes (from `flash_messages.each { |type, ...| }`); `flash_success`/
+`flash_warning`/`flash_info` are the same convention extended to a host
+setting those keys directly (`flash[:warning] = "..."`, etc) — Prism
+colors each of the four icon/progress-bar combinations distinctly, all
+five type classes included. `.prism-flash-hide` is added by `prism.js`
+right before removal (opacity/transform transition), timed against the
+`data-prism-transition-ms` attribute. `.prism-flash-progress`'s width
+animates via CSS (`@keyframes prism-flash-countdown`, `transform: scaleX`)
+against the same duration `prism.js` uses for the actual removal timer —
+hovering a card pauses both in lockstep (`animation-play-state` for the
+bar, a tracked remaining-time restart for the timer itself) rather than
+just the visual, so a paused bar can't silently disagree with a flash
+that's still counting down underneath it. See
 [Flash messages](#flash-messages) / [Configuration reference](#configuration-reference).
 
 ### Confirm dialog (jQuery UI)

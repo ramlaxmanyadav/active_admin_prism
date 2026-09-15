@@ -57,11 +57,44 @@ a {
 
 // Flash messages — ActiveAdmin renders these with a heavy full-width
 // gradient bar (padding: 13px 30px 11px, font-size: 1.1em); this reskins
-// them into a compact, inset, color-coded banner. ".flashes" itself gets
-// its grid placement from _sidebar.scss (must be explicit — see comment
-// there on why leaving it to auto-placement broke the layout).
+// them into a floating toast stack, pinned to the viewport rather than
+// pushed into the page's own grid flow (a toast that shifted #main_content
+// down every time one appeared, then snapped back up when it auto-hid,
+// would be its own layout-jank bug). ".flashes" still gets a grid-row/
+// grid-column from _sidebar.scss for its notional *static* position (some
+// tooling/AT expects every grid child to have one), but `position: fixed`
+// below is what actually places it — relative to the viewport, ignoring
+// that grid area entirely.
 .flashes {
-  padding: 10px 10px 0;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  padding: 0;
+  pointer-events: none;
+
+  // Individual toasts opt back into being interactive (hoverable/
+  // clickable dismiss button) — the wrapper itself must stay
+  // non-interactive, or it would sit as an invisible 340px-wide click
+  // blocker over the top-right corner of every page even between toasts.
+  > * {
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .flashes {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
 }
 
 // "body.active_admin .flash" (not a flat ".flash") on purpose: ActiveAdmin
@@ -83,21 +116,25 @@ body.active_admin .flash {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  background: $prism-bg-page;
+  gap: 10px;
+  background: $prism-bg-card;
   border: 1px solid $prism-border-color;
-  border-left: 3px solid $prism-text-muted;
-  border-radius: $prism-radius-sm;
-  box-shadow: none;
+  border-radius: $prism-radius;
+  // overflow: hidden clips .prism-flash-progress's square corners to this
+  // card's own rounded ones.
+  overflow: hidden;
+  box-shadow: $prism-shadow-popover;
   text-shadow: none;
   color: $prism-text-heading;
-  font-size: 0.9em;
+  font-size: 0.88em;
   font-weight: 600;
   line-height: 1.4;
-  padding: 10px 16px;
+  // Right padding clears .prism-flash-dismiss, absolutely positioned in
+  // this corner rather than sitting inline — see below.
+  padding: 14px 34px 16px 14px;
   margin-bottom: 0;
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(0) scale(1);
   // 320ms/cubic-bezier here matches Configuration#flash_transition_ms's
   // default and is overridden inline by prism.js (transition-duration) if a
   // host configures a different value — see that file's flash-dismiss IIFE.
@@ -109,47 +146,147 @@ body.active_admin .flash {
   // outright once the transition finishes.
   &.prism-flash-hide {
     opacity: 0;
-    transform: translateY(-6px) scale(0.98);
+    transform: translateX(24px) scale(0.98);
   }
 
-  &.flash_notice {
-    background: $prism-color-success-light;
-    border-left-color: $prism-color-success;
-    color: darken($prism-color-success, 20%);
+  // "notice"/"success" both read as the positive/affirmative case (Rails'
+  // own convention already treats :notice that way) — same color, same
+  // :check_circle icon (see flash_messages.rb#FLASH_ICONS).
+  //
+  // background/border/color are redeclared here (not just left to the
+  // base .flash rule above) because ActiveAdmin core itself carries a
+  // "body.logged_in .flash.flash_notice"/".flash_error" rule of its own
+  // (active_admin/components/_flash_messages.scss — a pale gradient +
+  // colored border-bottom), and THAT selector is one class more specific
+  // than the base ".flash" rule above (0,3,1 vs 0,2,1) — more specific
+  // than "body.active_admin .flash" even though this gem's own class list
+  // ties AA's elsewhere. Only ".flash_notice"/".flash_error" get this
+  // treatment because those are the only two AA core actually special-
+  // cases; every other type here already wins on the base rule alone.
+  &.flash_notice,
+  &.flash_success {
+    background: $prism-bg-card;
+    border-bottom-color: $prism-border-color;
+    color: $prism-text-heading;
+
+    .prism-flash-icon {
+      color: $prism-color-success;
+    }
+
+    .prism-flash-progress {
+      background: $prism-color-success;
+    }
   }
 
   &.flash_error,
   &.flash_alert {
-    background: $prism-color-danger-light;
-    border-left-color: $prism-color-danger;
-    color: darken($prism-color-danger, 10%);
+    background: $prism-bg-card;
+    border-bottom-color: $prism-border-color;
+    color: $prism-text-heading;
+
+    .prism-flash-icon {
+      color: $prism-color-danger;
+    }
+
+    .prism-flash-progress {
+      background: $prism-color-danger;
+    }
   }
+
+  &.flash_warning {
+    .prism-flash-icon {
+      color: $prism-color-warning;
+    }
+
+    .prism-flash-progress {
+      background: $prism-color-warning;
+    }
+  }
+
+  // Any other flash key (a host's own custom one) falls back here too —
+  // flash_messages.rb#flash_icon already defaults to the same :info icon
+  // for anything not in FLASH_ICONS, so this default color matches it.
+  &.flash_info,
+  &:not(.flash_notice):not(.flash_success):not(.flash_error):not(.flash_alert):not(.flash_warning) {
+    .prism-flash-icon {
+      color: $prism-color-info;
+    }
+
+    .prism-flash-progress {
+      background: $prism-color-info;
+    }
+  }
+}
+
+.prism-flash-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 .prism-flash-message {
   flex: 1 1 auto;
+  padding-top: 1px;
 }
 
 .prism-flash-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
-  margin: -2px -4px -2px 0;
   padding: 0;
   border: none;
   border-radius: $prism-radius-sm;
   background: transparent !important;
-  color: inherit !important;
-  opacity: 0.6;
+  color: $prism-text-muted !important;
+  opacity: 0.8;
   cursor: pointer;
   transition: opacity $prism-transition-fast, background $prism-transition-fast;
 
   &:hover {
     opacity: 1;
-    background: rgba(0, 0, 0, 0.06) !important;
+    background: $prism-bg-page !important;
+  }
+}
+
+// The countdown bar along the card's bottom edge — only rendered when
+// ActiveAdminPrism::Configuration#flash_auto_dismiss is on (see
+// flash_messages.rb), so its presence already implies a duration to
+// animate against. "--prism-flash-duration" is set inline per-flash
+// (flash_messages.rb) rather than read from js-src/prism.js's own
+// "data-prism-auto-dismiss-ms" (rendered once on the whole ".flashes"
+// wrapper, not per card) — CSS can't read a JS-parsed value, so the same
+// number is rendered twice rather than having JS set the animation
+// itself. scaleX (not animating `width` directly) is what lets the
+// browser run this on the compositor instead of laying out every frame.
+.prism-flash-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  transform-origin: left center;
+  animation: prism-flash-countdown var(--prism-flash-duration, 5000ms) linear forwards;
+
+  // Paused (not hidden) rather than reset to full width — a flash a
+  // visitor is actively reading (mouse over it) shouldn't keep silently
+  // ticking down and vanish out from under them.
+  body.active_admin .flash:hover & {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes prism-flash-countdown {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
   }
 }
 

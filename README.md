@@ -101,6 +101,7 @@ ActiveAdminPrism.configure do |config|
   config.colorize_action_icons = true   # color-coded View/Edit/Delete icons
   config.styled_confirms = true         # route data-confirm through the styled dialog
   config.collapsible_filters = true     # "Filters" panel collapses to an icon until clicked
+  config.active_filters_bar = true      # current scope/filters summary renders above the table
   config.sidebar_footer = true          # "Powered by Active Admin" moves into the sidebar
   config.flash_dismissible = true       # dismiss (x) button on flash messages
   config.flash_auto_dismiss = true      # auto-hide flash messages
@@ -118,6 +119,7 @@ ActiveAdminPrism.configure do |config|
   ]
   config.menu_search = true             # search box that filters the sidebar's Pages nav
   config.select2 = false                # default: false — auto-enhance every <select> into Select2
+  config.sidebar_collapsible = true     # sidebar collapses to an icon-only rail (desktop only)
 end
 
 ActiveAdminPrism.enable!

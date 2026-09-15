@@ -20,6 +20,21 @@ form {
       font-weight: 600;
       font-size: 0.9em;
     }
+
+    // ActiveAdmin core's form layout floats each field row's <label>
+    // (float: left; width: 20% — active_admin's own _forms.scss) as its
+    // two-column label/input technique. Without a clearfix, a floated
+    // label's height doesn't count toward its own <li>'s box, so a short
+    // row right after one whose label this theme deliberately does NOT
+    // float (e.g. a boolean field, or `as: :prism_toggle` above) can let
+    // the *next* row's own floated label render up alongside the previous
+    // row instead of starting its own line below it. Same class of
+    // fragility the button row below already had (float has no effect on
+    // siblings once contained) — same fix here, kept to a plain clearfix
+    // rather than a full flex rewrite of every field row.
+    > ol > li {
+      overflow: hidden;
+    }
   }
 
   input[type="text"],

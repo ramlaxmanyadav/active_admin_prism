@@ -29,6 +29,30 @@ body:not(.logged_out).index #wrapper {
   grid-template-rows: auto auto auto 1fr auto;
   min-height: 100vh;
   width: 100%;
+  // Animates the reflow when ActiveAdminPrism.configuration#sidebar_collapsible's
+  // toggle fires (see "body.prism-sidebar-collapsed" below) — a no-op the
+  // rest of the time. Grid track sizes are animatable in every currently
+  // supported browser; where they aren't, this simply snaps instead of
+  // sliding, same graceful-degradation as the collapsible Filters panel's
+  // own reflow (scss-src/_panels.scss).
+  transition: grid-template-columns 280ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Desktop sidebar rail-collapse (ActiveAdminPrism::Configuration
+// #sidebar_collapsible, toggled by .prism-sidebar-collapse-toggle — see
+// js-src/prism.js). Explicitly scoped to desktop widths (matching the
+// "max-width: 900px" mobile breakpoint below): below that width the
+// sidebar is already off-canvas (slid fully off-screen via `transform`,
+// full width once opened) — .prism-sidebar-collapsed can still be present
+// on <body> there (nothing clears it on resize), so without this guard a
+// visitor who'd collapsed the rail on desktop and then opened the mobile
+// off-canvas menu would get it stuck at rail width instead of a normal,
+// readable full-width drawer.
+@media (min-width: 901px) {
+  body.prism-sidebar-collapsed:not(.logged_out) #wrapper,
+  body.prism-sidebar-collapsed:not(.logged_out).index #wrapper {
+    grid-template-columns: $prism-sidebar-collapsed-width 1fr;
+  }
 }
 
 #header.prism-sidebar {
@@ -59,6 +83,7 @@ body:not(.logged_out).index #wrapper {
   max-height: 100vh;
   overflow: hidden;
   z-index: 100;
+  transition: width 280ms cubic-bezier(0.4, 0, 0.2, 1);
 
   // Reset the inherited primary-gradient/text-shadow look from AA's default
   // #header rule — this component owns its own visual language.
@@ -124,6 +149,9 @@ body:not(.prism-sidebar-footer-disabled) #footer {
 
   .prism-sidebar-brand {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     padding: 20px 24px;
     border-bottom: 1px solid $prism-border-color;
 
@@ -133,12 +161,40 @@ body:not(.prism-sidebar-footer-disabled) #footer {
       font-size: 1.15em;
       font-weight: 700;
       color: $prism-text-heading;
+      overflow: hidden;
+      white-space: nowrap;
 
       a {
         color: inherit;
         text-decoration: none;
       }
     }
+  }
+
+  // Hamburger icon button, top of the sidebar (ActiveAdminPrism::Configuration
+  // #sidebar_collapsible) — see prism_sidebar.rb#render_collapse_toggle.
+  .prism-sidebar-collapse-toggle {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: -6px 0;
+    border-radius: $prism-radius-sm;
+    color: $prism-text-muted;
+    cursor: pointer;
+    user-select: none;
+    transition: background $prism-transition-fast, color $prism-transition-fast;
+
+    &:hover {
+      background: $prism-bg-page;
+      color: $prism-text-heading;
+    }
+  }
+
+  .prism-sidebar-collapse-icon {
+    flex: 0 0 auto;
   }
 
   // "Languages" dropdown (ActiveAdminPrismTheme::Configuration
@@ -519,6 +575,84 @@ body:not(.prism-sidebar-footer-disabled) #footer {
     font-weight: 700;
     line-height: 20px;
   }
+
+}
+
+// Collapsed rail state: shrink the sidebar itself (the #wrapper grid
+// track already narrowed above) and hide every label/text element,
+// leaving just the icon column. Every item keeps its native `title`
+// attribute (see prism_sidebar.rb's render_leaf/render_group_toggle) as
+// the only way left to identify it by hovering. Scoped to desktop widths —
+// see the comment on the #wrapper override above for why this can't apply
+// unconditionally.
+@media (min-width: 901px) {
+  body.prism-sidebar-collapsed #header.prism-sidebar {
+    width: $prism-sidebar-collapsed-width;
+
+    .prism-sidebar-brand {
+      padding: 20px 0;
+      justify-content: center;
+    }
+
+    .prism-sidebar-brand #site_title,
+    .prism-sidebar-lang,
+    .prism-sidebar-search,
+    .prism-nav-section-label,
+    .prism-nav-label,
+    .prism-lang-current,
+    .prism-sidebar-lang .prism-chevron,
+    .prism-nav-item .prism-chevron,
+    .prism-sidebar-footer {
+      display: none;
+    }
+
+    // !important: `.prism-nav-item.open > .prism-nav-submenu { display:
+    // block; }` above (b=4 classes) is otherwise MORE specific than even
+    // this rule's `body.prism-sidebar-collapsed #header.prism-sidebar
+    // .prism-nav-submenu` (b=3 classes plus the body type selector, which
+    // only breaks a tie and doesn't offset a class-count deficit) — a
+    // group left open before collapsing would keep rendering its full
+    // submenu (every child's icon *and* label) spilling out past the 76px
+    // rail instead of collapsing down to just the parent's own icon.
+    .prism-nav-submenu {
+      display: none !important;
+    }
+
+    .prism-sidebar-scroll {
+      padding: 20px 8px;
+    }
+
+    .prism-nav-item {
+      > .prism-nav-link,
+      > .prism-nav-group-toggle {
+        justify-content: center;
+        padding: 9px;
+      }
+
+      // A menu item registered with no `icon:` (see [Sidebar navigation:
+      // icons & badges] in INTEGRATION.md) renders only its now-hidden
+      // .prism-nav-label — nothing at all while collapsed, which for an
+      // `.active` item is an empty color-highlighted box with no visible
+      // content to anchor it, and for any other item is a totally blank
+      // row indistinguishable from dead space. A small dot keeps every
+      // row visually non-empty without requiring every host to assign an
+      // icon to every single item just to look right once collapsed.
+      > .prism-nav-link:not(:has(.prism-nav-icon))::after,
+      > .prism-nav-group-toggle:not(:has(.prism-nav-icon))::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.6;
+      }
+    }
+
+    .prism-sidebar-utility {
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+  }
 }
 
 .prism-sidebar-mobile-toggle {
@@ -550,13 +684,20 @@ body:not(.prism-sidebar-footer-disabled) #footer {
     grid-template-columns: 1fr;
   }
 
+  // "left" (not "transform: translateX(...)") is what actually slides this
+  // panel off/on screen — deliberately. A `transform` on this element
+  // would make IT the containing block for any `position: fixed`
+  // descendant (CSS Positioned Layout spec), which is exactly what
+  // .prism-sidebar-mobile-toggle above is: it'd slide off-screen right
+  // along with the (intentionally hidden) sidebar instead of staying
+  // fixed to the viewport corner where a visitor could actually reach it
+  // to open the menu back up. `left` carries no such side effect.
   #header.prism-sidebar {
     position: fixed;
-    left: 0;
+    left: -#{$prism-sidebar-width};
     top: 0;
     bottom: 0;
-    transform: translateX(-100%);
-    transition: transform $prism-transition-fast;
+    transition: left $prism-transition-fast;
     box-shadow: $prism-shadow-popover;
   }
 
@@ -568,6 +709,6 @@ body:not(.prism-sidebar-footer-disabled) #footer {
   }
 
   body.prism-sidebar-open #header.prism-sidebar {
-    transform: translateX(0);
+    left: 0;
   }
 }

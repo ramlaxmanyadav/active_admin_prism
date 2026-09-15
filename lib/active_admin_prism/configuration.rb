@@ -161,6 +161,44 @@ module ActiveAdminPrism
     # see js-src/prism.js and vendor/select2/.
     attr_accessor :select2
 
+    # Whether the "current scope + active filters" summary (AA core's own
+    # "Search status" sidebar section, auto-added to every resource) renders
+    # as a compact bar above the index table instead of inside #sidebar.
+    # true (the default) avoids it getting squeezed/overflowing alongside
+    # the Filters panel when collapsible_filters is on (see
+    # lib/active_admin/views/active_filters_bar.rb). false restores
+    # ActiveAdmin's stock behavior — rendered inside #sidebar as its own
+    # panel, above/below the Filters form depending on registration order.
+    attr_accessor :active_filters_bar
+
+    # Whether a toggle button renders at the bottom of the Prism sidebar
+    # (below the nav/account area) that collapses it to a narrow icon-only
+    # rail on desktop, expanding back to full width (with labels) on
+    # another click — state persists across page loads via localStorage,
+    # the same convention already used for per-group nav expand/collapse
+    # state (see lib/active_admin/views/prism_sidebar.rb and js-src/prism.js).
+    # Purely a desktop feature: the existing off-canvas mobile toggle
+    # (below 900px) is unaffected either way. false renders no toggle at
+    # all — the sidebar is always full width, matching this gem's behavior
+    # before this flag existed.
+    attr_accessor :sidebar_collapsible
+
+    # Milliseconds equivalent of #flash_auto_dismiss_seconds, or nil when
+    # #flash_auto_dismiss is off — the exact number both flash-rendering
+    # paths this gem ships (lib/active_admin/views/flash_messages.rb's
+    # Arbre override for logged-in pages, and the plain-ERB
+    # app/views/layouts/active_admin_logged_out.html.erb for Devise's
+    # sign-in/password/etc pages) need to render identically: as the
+    # "data-prism-auto-dismiss-ms" attribute js-src/prism.js reads to
+    # schedule removal, and as each flash's own
+    # "--prism-flash-duration" inline style the countdown bar
+    # (scss-src/_base.scss's ".prism-flash-progress") animates against.
+    def flash_auto_dismiss_ms
+      return nil unless flash_auto_dismiss
+
+      (flash_auto_dismiss_seconds.to_f * 1000).round
+    end
+
     def initialize
       @sidebar = true
       @colorize_action_icons = true
@@ -183,6 +221,8 @@ module ActiveAdminPrism
       ]
       @menu_search = true
       @select2 = false
+      @active_filters_bar = true
+      @sidebar_collapsible = true
     end
   end
 

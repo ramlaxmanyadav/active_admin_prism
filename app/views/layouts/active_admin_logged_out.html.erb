@@ -1,0 +1,76 @@
+<%# Overrides ActiveAdmin's own layouts/active_admin_logged_out.html.erb
+    (used for every Devise page — sign in, sign up, forgot/reset password,
+    resend confirmation, resend unlock) purely to upgrade its flash
+    rendering to this gem's toast cards (icon + dismiss button + countdown
+    bar), matching the same markup lib/active_admin/views/flash_messages.rb
+    renders for logged-in pages. Devise's pages route through this plain
+    ERB layout instead of ActiveAdmin::Views::Pages::Base/Arbre at all, so
+    that Ruby-side override alone never reaches them — this file is the
+    only way to reach them. Everything else here is copied verbatim from
+    ActiveAdmin core's own version; only the ".flashes" block differs. %>
+<!DOCTYPE html>
+<html lang="<%=I18n.locale%>">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+
+  <title><%= [@page_title, ActiveAdmin.application.site_title(self)].compact.join(" | ") %></title>
+
+  <% ActiveAdmin.application.stylesheets.each do |style, options| %>
+    <% if ActiveAdmin.application.use_webpacker %>
+      <%= stylesheet_pack_tag style, **options %>
+    <% else %>
+      <%= stylesheet_link_tag style, **options %>
+    <% end %>
+  <% end %>
+  <% ActiveAdmin.application.javascripts.each do |path, options| %>
+    <% if ActiveAdmin.application.use_webpacker %>
+      <%= javascript_pack_tag path, **options %>
+    <% else %>
+      <%= javascript_include_tag path, **options %>
+    <% end %>
+  <% end %>
+
+  <%= favicon_link_tag ActiveAdmin.application.favicon if ActiveAdmin.application.favicon %>
+
+  <% ActiveAdmin.application.meta_tags_for_logged_out_pages.each do |name, content| %>
+    <%= tag(:meta, name: name, content: content) %>
+  <% end %>
+
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+</head>
+<body class="active_admin logged_out <%= controller.action_name %>">
+<div id="wrapper">
+
+  <div id="content_wrapper">
+    <% prism_config = ActiveAdminPrism.configuration %>
+    <% prism_auto_dismiss_ms = prism_config.flash_auto_dismiss_ms %>
+    <div class="flashes"
+         data-prism-transition-ms="<%= prism_config.flash_transition_ms.to_i %>"
+         <%= "data-prism-auto-dismiss-ms=\"#{prism_auto_dismiss_ms}\"".html_safe if prism_auto_dismiss_ms %>>
+      <% flash_messages.each do |type, message| %>
+        <div class="flash flash_<%= type %>"
+             <%= "style=\"--prism-flash-duration: #{prism_auto_dismiss_ms}ms\"".html_safe if prism_auto_dismiss_ms %>>
+          <%= ActiveAdminPrism::Icons.svg(ActiveAdminPrism::Icons.flash_icon_name(type), css_class: "prism-flash-icon")&.html_safe %>
+          <span class="prism-flash-message"><%= message %></span>
+          <% if prism_config.flash_dismissible %>
+            <button class="prism-flash-dismiss" type="button" aria-label="Dismiss" data-prism-flash-dismiss="true">
+              <%= ActiveAdminPrism::Icons.svg(:x, css_class: "prism-flash-dismiss-icon", size: 14)&.html_safe %>
+            </button>
+          <% end %>
+          <% if prism_auto_dismiss_ms %>
+            <div class="prism-flash-progress"></div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    <div id="active_admin_content">
+      <%= yield %>
+    </div>
+  </div>
+  <div id="footer">
+    <%= yield :footer %>
+  </div>
+</div>
+</body>
+</html>

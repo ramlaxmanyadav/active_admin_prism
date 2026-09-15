@@ -75,6 +75,55 @@
   });
 })();
 
+// Desktop sidebar rail-collapse toggle (ActiveAdminPrism::Configuration
+// #sidebar_collapsible) — separate from the mobile off-canvas toggle above:
+// that one slides the whole sidebar on/off screen below 900px; this one
+// shrinks it to a narrow icon-only rail on desktop instead, and the two
+// don't interact (scss-src/_sidebar.scss scopes rail-collapse to nothing in
+// particular, but the mobile media query's own `transform`/`position: fixed`
+// rules take over below 900px regardless of this class). State persists to
+// localStorage under its own key, same convention as the nav-group state
+// above, so a returning visitor keeps their last choice.
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "prism_sidebar_collapsed";
+
+  function setCollapsed(toggle, collapsed) {
+    document.body.classList.toggle("prism-sidebar-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    toggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+    try {
+      window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0");
+    } catch (e) {
+      // localStorage unavailable — degrade to in-memory only, no
+      // persistence across reloads.
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var toggle = document.querySelector("[data-prism-toggle-sidebar-collapse]");
+    if (!toggle) return;
+
+    var stored;
+    try {
+      stored = window.localStorage.getItem(STORAGE_KEY);
+    } catch (e) {
+      stored = null;
+    }
+    if (stored === "1") setCollapsed(toggle, true);
+
+    toggle.addEventListener("click", function () {
+      setCollapsed(toggle, !document.body.classList.contains("prism-sidebar-collapsed"));
+    });
+    toggle.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      setCollapsed(toggle, !document.body.classList.contains("prism-sidebar-collapsed"));
+    });
+  });
+})();
+
 // Sidebar menu search box (lib/active_admin/views/prism_sidebar.rb
 // #render_search_box) — filters the "Pages" nav as the visitor types,
 // matching an item's own label at ANY nesting depth, not just top-level
@@ -222,7 +271,9 @@
   });
 })();
 
-// Flash messages: dismiss button + auto-hide. See
+// Flash messages: dismiss button + auto-hide, toast-style (see
+// scss-src/_base.scss for the floating card layout and the
+// ".prism-flash-progress" countdown bar this keeps in sync with). See
 // lib/active_admin/views/flash_messages.rb, which renders the
 // ".prism-flash-dismiss" button markup this responds to, and two data
 // attributes this reads at runtime so Ruby-side config controls behavior
@@ -249,6 +300,36 @@
     }, transitionMs);
   }
 
+  // Hovering a toast pauses both its countdown bar (CSS
+  // "animation-play-state: paused" on :hover, in scss-src/_base.scss) and
+  // the actual removal timer here, tracking whatever time was left rather
+  // than restarting from the full duration — a flash a visitor is
+  // mid-read shouldn't silently vanish out from under them just because
+  // its timer happened to elapse while their mouse was still over it.
+  function armAutoDismiss(flash, totalMs, transitionMs) {
+    var remainingMs = totalMs;
+    var timer = null;
+    var startedAt = null;
+
+    function start() {
+      startedAt = Date.now();
+      timer = setTimeout(function () {
+        dismiss(flash, transitionMs);
+      }, remainingMs);
+    }
+
+    function pause() {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = null;
+      remainingMs -= Date.now() - startedAt;
+    }
+
+    flash.addEventListener("mouseenter", pause);
+    flash.addEventListener("mouseleave", start);
+    start();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     var flashesWrapper = document.querySelector(".flashes");
     var flashes = document.querySelectorAll(".flashes .flash");
@@ -259,9 +340,7 @@
 
     if (autoDismissMs) {
       flashes.forEach(function (flash) {
-        setTimeout(function () {
-          dismiss(flash, transitionMs);
-        }, autoDismissMs);
+        armAutoDismiss(flash, autoDismissMs, transitionMs);
       });
     }
 
@@ -301,10 +380,14 @@
     // #main_content/#sidebar width reflow off this body class instead.
     document.body.classList.toggle("prism-filters-open", section.classList.contains("open"));
 
-    function toggleOpen() {
-      var open = section.classList.toggle("open");
+    function setOpen(open) {
+      section.classList.toggle("open", open);
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
       document.body.classList.toggle("prism-filters-open", open);
+    }
+
+    function toggleOpen() {
+      setOpen(!section.classList.contains("open"));
     }
 
     toggle.addEventListener("click", toggleOpen);
@@ -313,6 +396,30 @@
       event.preventDefault();
       toggleOpen();
     });
+
+    // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
+    // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
+    // straight to the Filters form itself — clicking anywhere on it always
+    // *opens* the panel (never toggles it closed; that's still the
+    // funnel icon's job) and scrolls it into view, since #sidebar isn't
+    // sticky the way the left nav is and can scroll out of view on a
+    // long table.
+    var activeFiltersBar = document.getElementById("prism_active_filters_bar");
+    if (activeFiltersBar) {
+      activeFiltersBar.setAttribute("role", "button");
+      activeFiltersBar.setAttribute("tabindex", "0");
+      activeFiltersBar.setAttribute("aria-label", "Show filters");
+
+      var openFromBar = function (event) {
+        if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+        if (event.type === "keydown") event.preventDefault();
+        setOpen(true);
+        section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      };
+
+      activeFiltersBar.addEventListener("click", openFromBar);
+      activeFiltersBar.addEventListener("keydown", openFromBar);
+    }
   });
 })();
 

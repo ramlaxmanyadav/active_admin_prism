@@ -1,5 +1,92 @@
 # Changelog
 
+## 0.1.3
+
+- A hamburger icon button next to the brand, at the top of the Prism
+  sidebar (`config.sidebar_collapsible`, default `true`), collapses it to
+  a narrow icon-only rail on desktop, expanding back to full width (with
+  labels) on another click — state persists across page loads. Purely a
+  desktop feature; the existing off-canvas mobile toggle below 900px is
+  unaffected either way. Every nav item keeps a native tooltip (its label,
+  on hover) so it stays identifiable while collapsed. Set
+  `config.sidebar_collapsible = false` to render no toggle at all — the
+  sidebar is always full width, matching this gem's behavior before this
+  flag existed.
+- Flash messages now render as floating toast cards (icon + message +
+  dismiss button + a countdown progress bar), pinned to the top-right
+  corner of the viewport and stacking if more than one is active, instead
+  of ActiveAdmin's plain inline banner. A type-colored icon
+  (`:check_circle`/`:alert_triangle`/`:alert_circle`/`:info`) is selected
+  from the flash's key — `:notice`/`:success`, `:alert`/`:warning`,
+  `:error`, and anything else, respectively. While `flash_auto_dismiss`
+  is on, a bar along the card's bottom edge visually counts down over
+  `flash_auto_dismiss_seconds`; hovering the card pauses both that bar
+  and the actual removal timer in lockstep (not just the animation), so a
+  flash a visitor is mid-read can't vanish out from under them. This
+  applies identically to Devise's sign-in/password/etc pages, which
+  needed a small layout override of their own — see
+  `app/views/layouts/active_admin_logged_out.html.erb` — since those
+  route through a completely separate layout ActiveAdmin itself ships
+  rather than through this gem's usual Arbre-based override point.
+- The active filters bar is now itself a shortcut to the Filters form —
+  clicking anywhere on it opens the (possibly collapsed) Filters panel and
+  scrolls it into view, instead of only the separate funnel icon doing
+  that.
+- Fixed: the active filters bar fell 12px short of the table's own right
+  edge instead of aligning flush with it — `.table_tools`'s `gap` and the
+  bar's `margin-left: auto` (used to push it to the row's far end) are on
+  the same axis, and a nonzero column-gap there gets double-counted by
+  the auto margin's free-space math, leaving exactly one gap's worth of
+  space unclaimed after the last item. Switched to `row-gap` (still
+  spaces Batch Actions from the bar vertically if they wrap onto separate
+  lines on a narrow viewport, without the bug).
+- Fixed: the rail-collapsed sidebar (`config.sidebar_collapsible`) had two
+  space issues — a group left open before collapsing kept rendering its
+  full submenu (every child's icon *and* label) spilling out past the
+  76px rail instead of collapsing to just the parent's own icon (a
+  `.prism-nav-item.open > .prism-nav-submenu` rule was more specific than
+  the one meant to hide it); and any menu item with no `icon:` set (see
+  [Sidebar navigation: icons & badges] in INTEGRATION.md) rendered as
+  either an empty color-highlighted box (if `.active`) or a totally blank
+  row once its label was hidden, reading as broken dead space. Menu items
+  without an icon now get a small dot instead, once collapsed.
+- Fixed: the mobile off-canvas sidebar toggle (`.prism-sidebar-mobile-toggle`,
+  ≤900px viewports) was rendered completely off-screen and unclickable —
+  it's a `position: fixed` descendant of `#header.prism-sidebar`, and that
+  element's own `transform: translateX(-100%)` (used to slide the closed
+  sidebar off-screen) made it the containing block for that fixed
+  descendant too, dragging the toggle button off-screen right along with
+  the hidden sidebar. The off-canvas slide now animates `left` instead of
+  `transform`, which carries no such side effect.
+- The "current scope + active filters" summary (ActiveAdmin core's own
+  "Search status" sidebar section, auto-added to every resource) now
+  renders as a highlighted pill bar in the same row as the Batch Actions
+  button/scope tabs, instead of inside `#sidebar`
+  (`config.active_filters_bar`, default `true`) — tinted with the theme's
+  primary color so it reads as a clear, eye-catching signal rather than
+  another gray panel. It used to get squeezed down to the same 72px icon
+  gutter as the Filters form whenever `collapsible_filters` had it
+  collapsed, and its content had nowhere to fit in 72px — it overflowed
+  out over the table instead of shrinking cleanly. Set
+  `config.active_filters_bar = false` to restore ActiveAdmin's stock
+  sidebar-based behavior.
+- Fixed: a Select2-enhanced `<select>` in the main form (`config.select2`,
+  or any field opted in individually) rendered full-width on its own line
+  below its label instead of beside it, like every other field. The BFC
+  sizing trick used to fit it into ActiveAdmin core's floated-label layout
+  only works when the element's width is `auto` — but Select2 always sets
+  an inline `width: 100%` on `.select2-container` itself (prism.js's
+  auto-init passes `{ width: "100%" }`, and a host's own manual
+  `.select2()` call hits the same code path at its default width), so that
+  trick never actually engaged. Matches ActiveAdmin core's own input width
+  instead.
+- Fixed: a field row whose label this theme deliberately doesn't float
+  (e.g. a boolean checkbox, or `as: :prism_toggle`) could let the *next*
+  row's floated label render up alongside it instead of starting on its
+  own line below, since the short row's un-cleared float left no height
+  for the next label to clear against. Every field row now clears its own
+  floats.
+
 ## 0.1.2
 
 - Adds [Select2](https://select2.org) support (`config.select2`, default

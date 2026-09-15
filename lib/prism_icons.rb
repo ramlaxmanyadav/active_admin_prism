@@ -36,7 +36,11 @@ module ActiveAdminPrism
              '<path d="M10 11v6M14 11v6"/>',
       filter: '<path d="M4 5h16l-6.5 7.5v6l-3 1.5v-7.5Z"/>',
       globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/>' \
-             '<path d="M12 3c2.5 2.4 4 5.6 4 9s-1.5 6.6-4 9c-2.5-2.4-4-5.6-4-9s1.5-6.6 4-9Z"/>'
+             '<path d="M12 3c2.5 2.4 4 5.6 4 9s-1.5 6.6-4 9c-2.5-2.4-4-5.6-4-9s1.5-6.6 4-9Z"/>',
+      check_circle: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9"/>',
+      alert_circle: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v6"/><circle cx="12" cy="16.5" r="0.1" fill="currentColor" stroke-width="2.5"/>',
+      alert_triangle: '<path d="M12 4 2.5 20h19L12 4Z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r="0.1" fill="currentColor" stroke-width="2.5"/>',
+      info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.1" fill="currentColor" stroke-width="2.5"/>'
     }.freeze
 
     # Returns an inline <svg>...</svg> string for `name`, or nil if unknown.
@@ -47,6 +51,27 @@ module ActiveAdminPrism
       %(<svg class="#{css_class}" width="#{size}" height="#{size}" viewBox="0 0 24 24" ) +
         %(fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" ) +
         %(stroke-linejoin="round" aria-hidden="true">#{inner}</svg>)
+    end
+
+    # Maps a flash's key (Rails' own :notice/:alert conventions, plus
+    # :error/:warning/:success/:info as an app might set directly) to one
+    # of the four icons above — anything else (a host's own custom flash
+    # key) falls back to the neutral :info icon rather than none at all.
+    # Shared by both flash-rendering paths this gem ships: the Arbre-based
+    # one for logged-in pages (lib/active_admin/views/flash_messages.rb)
+    # and the plain-ERB logged-out layout (app/views/layouts/
+    # active_admin_logged_out.html.erb) — Devise's sign-in/password/etc
+    # pages render through a completely separate layout ActiveAdmin
+    # itself ships, not through Pages::Base/Arbre at all, so that
+    # Ruby-side override alone never reaches them.
+    FLASH_ICONS = {
+      notice: :check_circle, success: :check_circle,
+      alert: :alert_triangle, warning: :alert_triangle,
+      error: :alert_circle
+    }.freeze
+
+    def self.flash_icon_name(type)
+      FLASH_ICONS[type.to_sym] || :info
     end
 
     # The default sign-in page mark (see ActiveAdminPrism::Configuration

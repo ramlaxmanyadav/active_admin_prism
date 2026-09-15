@@ -236,6 +236,167 @@ body.prism-filters-collapsible-disabled .prism-collapsible-panel {
   }
 }
 
+// AA core's own ".table_tools" (active_admin/views/pages/index.rb,
+// styled by its components/_table_tools.scss) is a clearfixed block whose
+// children (the Batch Actions dropdown, scope tabs) float left. Flexbox
+// is what puts .prism-active-filters-bar below on the same row — floats
+// have no effect on flex items regardless of specificity/load order, same
+// rationale as the form actions row in _forms.scss.
+.table_tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  // row-gap only (not the shorthand "gap", i.e. no column-gap) —
+  // .prism-active-filters-bar below is pushed to this row's far end via
+  // `margin-left: auto`, not `justify-content`, and a nonzero column-gap
+  // on the same axis as that auto margin gets double-counted by the auto
+  // margin's own free-space math, leaving exactly one gap's worth of
+  // unclaimed space *after* the last item instead of before it — the bar
+  // fell short of the table's own right edge by exactly 12px. row-gap
+  // still spaces .table_tools_actions from the bar vertically if they
+  // wrap onto separate lines on a narrow viewport, without that bug.
+  row-gap: 12px;
+}
+
+// New wrapper (not AA's own markup) around whatever .table_tools would
+// have rendered directly before — see
+// lib/active_admin/views/active_filters_bar.rb#build_table_tools. Only
+// present when any_table_tools? is true.
+.table_tools_actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+// Compact "current scope + active filters" bar, rendered beside the Batch
+// Actions button/scope tabs instead of ActiveAdmin core's own
+// #sidebar-based "Search status" panel — see
+// lib/active_admin/views/active_filters_bar.rb (Ruby side,
+// ActiveAdminPrism::Configuration#active_filters_bar) for why: that
+// sidebar panel is a child of #sidebar, so it gets squeezed down to the
+// same 72px icon gutter as the Filters form whenever collapsible_filters
+// has it collapsed, and its content (one "field contains value" sentence
+// per active filter) has nowhere to fit in 72px and overflows out over
+// the table instead of shrinking cleanly. This reuses that same Ruby
+// component's markup/i18n (ActiveAdmin::Views::ActiveFiltersSidebarContent)
+// wholesale — restyled here as a single horizontal row of pill tags
+// instead of a vertical sidebar list, rather than reimplemented.
+//
+// Given its own tinted background/border (the theme's primary color,
+// same tokens as an active nav item or a focused input's ring) rather
+// than a plain card, so it reads as a distinct, "something is filtered"
+// signal at a glance next to the neutral Batch Actions button beside it —
+// not just another gray panel a visitor could mistake for chrome.
+.prism-active-filters-bar {
+  // inline-flex (not the plain block a bare `div` defaults to) sizes this
+  // to its own content instead of stretching to fill .table_tools's
+  // remaining width. margin-left: auto pushes it to the row's far end
+  // regardless of whether .table_tools_actions exists beside it (only
+  // rendered `if any_table_tools?` — a resource with filters active but
+  // no batch actions/scopes has nothing else in this row at all).
+  display: inline-flex;
+  max-width: 100%;
+  margin-left: auto;
+  padding: 8px 14px;
+  background: $prism-color-primary-light;
+  border: 1px solid rgba($prism-color-primary, 0.3);
+  border-left: 3px solid $prism-color-primary;
+  border-radius: $prism-radius;
+  font-size: 0.85em;
+  // Clicking it opens the Filters panel (js-src/prism.js) — a plain
+  // hover/focus cue rather than restyling the whole card on hover, so it
+  // doesn't fight with the already-deliberate "eye-catching" tinted look.
+  cursor: pointer;
+  transition: box-shadow $prism-transition-fast;
+
+  &:hover,
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($prism-color-primary, 0.15);
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  // The builder_method wraps ActiveFiltersSidebarContent's own output in a
+  // ".active_filters_sidebar_content" div (Arbre::Component's own
+  // convention) — this, not .prism-active-filters-bar itself, is the
+  // direct parent of the "Scope:"/"Current filters:" markup below.
+  .active_filters_sidebar_content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+  }
+
+  // ActiveFiltersSidebarContent#scope_block's "Scope:" <h4> (only present
+  // when a scope is active) + its value <b class="current_scope_name">.
+  > .active_filters_sidebar_content > h4 {
+    margin: 0;
+    font-size: 1em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $prism-color-primary-dark;
+  }
+
+  .current_scope_name {
+    color: $prism-color-primary-dark;
+    font-weight: 700;
+  }
+
+  // #filters_list wraps its own "Current filters:" <h4> + <ul> in a
+  // `div style="margin-top: 10px"`, sized for stacking under the scope
+  // line in a vertical sidebar — reset that now that everything sits
+  // inline in the same row instead.
+  > .active_filters_sidebar_content > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 14px;
+    margin-top: 0 !important;
+
+    > h4 {
+      margin: 0 !important;
+      font-size: 1em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: $prism-color-primary-dark;
+    }
+
+    > ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      li {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: $prism-radius-pill;
+        background: $prism-bg-card;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+        line-height: 1.4;
+
+        span {
+          color: $prism-text-muted;
+        }
+
+        b {
+          font-weight: 700;
+          color: $prism-color-primary-dark;
+        }
+      }
+    }
+  }
+}
+
 .blank_slate_container {
   .blank_slate {
     background: $prism-bg-card;

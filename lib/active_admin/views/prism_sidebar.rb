@@ -40,7 +40,10 @@ module ActiveAdmin
         end
 
         div class: "prism-sidebar-inner" do
-          div(class: "prism-sidebar-brand") { site_title @namespace }
+          div(class: "prism-sidebar-brand") do
+            render_collapse_toggle if ActiveAdminPrism.configuration.sidebar_collapsible
+            site_title @namespace
+          end
           render_language_switcher if ActiveAdminPrism.configuration.language_switcher
           render_search_box if ActiveAdminPrism.configuration.menu_search
           div(class: "prism-sidebar-scroll") do
@@ -77,6 +80,27 @@ module ActiveAdmin
           active_admin: helpers.link_to("Active Admin", "https://activeadmin.info"),
           version: ActiveAdmin::VERSION
         ).html_safe
+      end
+
+      # A hamburger icon button at the top of the sidebar, beside the brand
+      # — the same :menu icon the mobile off-canvas toggle uses, so both
+      # read as "the sidebar toggle" at a glance even though they're two
+      # separate buttons for two separate behaviors (this one only ever
+      # renders/matters at desktop widths; see scss-src/_sidebar.scss).
+      # Toggles the whole sidebar between full width and a narrow
+      # icon-only rail — see ActiveAdminPrism::Configuration
+      # #sidebar_collapsible and js-src/prism.js for the click handler
+      # (persists to localStorage) and scss-src/_sidebar.scss for the
+      # collapsed-state styling.
+      def render_collapse_toggle
+        span(
+          class: "prism-sidebar-collapse-toggle",
+          data: { "prism-toggle-sidebar-collapse": true },
+          role: "button", tabindex: "0", "aria-expanded": "true",
+          "aria-label": "Collapse sidebar"
+        ) do
+          text_node ActiveAdminPrism::Icons.svg(:menu, css_class: "prism-sidebar-collapse-icon").html_safe
+        end
       end
 
       # A small "Languages" dropdown near the top of the sidebar — see
@@ -191,7 +215,12 @@ module ActiveAdmin
       end
 
       def render_group_toggle(item, label)
-        span(class: "prism-nav-group-toggle", data: { "prism-toggle": true }) do
+        # title: a plain native tooltip — inert most of the time (the
+        # sidebar already shows this label as text), but the only way to
+        # identify this item by hover once ActiveAdminPrism::Configuration
+        # #sidebar_collapsible has shrunk the sidebar to its icon-only rail
+        # and .prism-nav-label itself is hidden (see scss-src/_sidebar.scss).
+        span(class: "prism-nav-group-toggle", data: { "prism-toggle": true }, title: label) do
           text_node icon_for(item)
           span(label, class: "prism-nav-label")
           text_node chevron_svg
@@ -201,11 +230,14 @@ module ActiveAdmin
       def render_leaf(item, label, url)
         link_options = item.html_options.except(:icon)
         link_options[:class] = ["prism-nav-link", link_options[:class]].compact.join(" ")
+        # Same rail-collapse tooltip as render_group_toggle above — a host's
+        # own explicit :title (via html_options) wins over the label.
+        link_options[:title] ||= label
 
         if real_url?(url)
           text_node helpers.link_to(link_body(item, label), url, **link_options)
         else
-          span(class: "prism-nav-link") { link_body(item, label) }
+          span(class: "prism-nav-link", title: label) { link_body(item, label) }
         end
       end
 

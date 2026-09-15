@@ -201,19 +201,36 @@ form.filter_form .filter_form_field.select_and_search .select2-container {
 
 // Main "fieldset.inputs" form: ActiveAdmin's own _forms.scss floats the
 // label left at 20% width and gives text inputs an explicit
-// width: calc(80% - padding) so they sit in the remaining space beside it
-// — a value this gem has no access to at compile time (it's compiled
+// width: calc(80% - 22px) so they sit in the remaining space beside it —
+// a value this gem has no access to at compile time (it's compiled
 // standalone, without AA's own SCSS variables/mixins in its load path; see
-// bin/build-css). Rather than hardcode an equivalent, giving the container
-// its own block formatting context (overflow: hidden, no explicit width)
-// gets the same result for free: per the CSS spec, a BFC-establishing box
-// must not overlap a preceding float's margin box, so the browser sizes it
-// to exactly the remaining space automatically. Without this, the default
-// 100% width above would render full-width *underneath* the floated
-// label, visually painting over it — this is the fix for that, not just a
-// visual nicety.
-fieldset.inputs .select2-container {
-  overflow: hidden;
+// bin/build-css), so it's matched here as a literal instead.
+//
+// A block-formatting-context trick (overflow: hidden, no explicit width)
+// looks like it should get the same result for free — per the CSS spec, a
+// BFC-establishing box must not overlap a preceding float's margin box —
+// but it only actually sizes the box when its width is auto. Select2 sets
+// an inline `width: 100%` directly on `.select2-container` itself
+// (prism.js's own auto-init passes `{ width: "100%" }`, and jQuery's
+// .css("width", ...) call is what select2.js uses under the hood even for
+// a host's own manual `.select2()` call left at its default width option),
+// so that inline 100% is never auto and the BFC sizing never kicks in —
+// the container renders full-width *underneath* the floated label instead
+// of beside it. `!important` is required here to beat that inline style.
+form fieldset.inputs li.select > .select2-container {
+  display: inline-block;
+  width: calc(80% - 22px) !important;
+  vertical-align: middle;
+}
+
+// Any select Select2 has not (yet) enhanced — it hides the real one via a
+// 1px offscreen technique once active, so this only matches before that,
+// or if it's disabled/skipped entirely — needs the same geometry so the
+// row doesn't jump once Select2 does attach.
+form fieldset.inputs li.select > select:not(.select2-hidden-accessible) {
+  display: inline-block;
+  width: calc(80% - 22px);
+  vertical-align: middle;
 }
 
 // The dropdown panel itself is appended to <body> (or wherever
