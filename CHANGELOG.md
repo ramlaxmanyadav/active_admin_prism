@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.5
+
+- Fixed: a page with several `action_item` buttons could briefly flash
+  the full, unstyled wall of individual buttons before
+  `action_items_dropdown` consolidated them into the "Actions" dropdown —
+  visible on a slow connection, since that consolidation only runs once
+  js-src/prism.js's own script has downloaded and executed, which can lag
+  well behind the buttons' own markup already having painted. A small
+  inline `<script>` right after them in the markup (lib/active_admin/views/title_bar.rb)
+  now hides them immediately, before that lag has a chance to show
+  anything — prism.js un-hides them again itself, right before either
+  moving them into the dropdown or, below its own threshold, leaving them
+  untouched. If JS is disabled entirely, that inline script never runs
+  either, so the buttons stay fully visible and functional throughout,
+  same as before this fix.
+
 ## 0.1.4
 
 - A Pages nav item registered with no `icon:` now gets one automatically

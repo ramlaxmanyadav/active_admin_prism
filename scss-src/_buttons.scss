@@ -41,6 +41,17 @@ form input[type="submit"].danger {
   @include prism-button-primary;
   padding: 9px 16px;
   margin: 0;
+  // Matches the ~36px a Select2 "single" selection box (padding: 9px +
+  // 1px border on each edge, around its own text's line-height) naturally
+  // comes out to — this button's own text alone, at the same 9px
+  // padding, is a few px shorter, so without an explicit floor here "New
+  // Book" renders visibly shorter than the "Sidebar Actions"/"Actions"
+  // dropdowns beside it. `min-height` (not `height`) so a host's own
+  // longer/wrapped label still grows the button instead of clipping.
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  box-sizing: border-box;
 }
 
 // #prism-titlebar-actions-row (below) and this button are appended as
@@ -87,6 +98,21 @@ form input[type="submit"].danger {
 
 .prism-action-items-holding {
   display: none;
+}
+
+// Set the instant lib/active_admin/views/title_bar.rb's own inline
+// <script> (right after the action_items themselves in the markup) runs —
+// see that file's comment for why this needs to be a synchronous inline
+// script rather than waiting on js-src/prism.js's own DOMContentLoaded
+// handler, which on a slow connection can lag well behind this markup
+// already having painted. `visibility: hidden`, not `display: none` —
+// this only needs to hide them, not also collapse the layout the
+// dropdown/row is about to render into. ":not(.prism-action-item-new)"
+// mirrors prism.js's own exclusion: the "New Resource" button is never
+// part of the consolidation this is covering for, so it's never hidden
+// here either.
+#titlebar_right.prism-action-items-pending .action_items .action_item:not(.prism-action-item-new) {
+  visibility: hidden;
 }
 
 // Consolidated "Sidebar Actions" jump menu (every collapsible sidebar

@@ -721,6 +721,15 @@ function prismTitlebarActionsRow() {
   document.addEventListener("DOMContentLoaded", function () {
     var right = document.getElementById("titlebar_right");
     if (!right || !right.dataset.prismActionItemsThreshold) return;
+
+    // Undoes lib/active_admin/views/title_bar.rb's own inline <script> —
+    // unconditionally, before any of the early returns below, since every
+    // one of them means "leave the action_items exactly as rendered",
+    // which the CSS this class enables (scss-src/_buttons.scss) would
+    // otherwise leave permanently hidden with nothing left to ever show
+    // them again (this file has already finished running by then).
+    right.classList.remove("prism-action-items-pending");
+
     if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
 
     // Not "!threshold" — 0 is this option's own default (see

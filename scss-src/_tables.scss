@@ -51,14 +51,28 @@
   // more assertive than a plain subtle fade — paired with the scrollbar
   // above, this is meant to be unmissable, not merely present if you
   // look closely.
+  //
+  // The gradient itself spans the full table height (top:0, bottom:0) —
+  // it's a legitimate cue at any row, not just the header's. The chevron
+  // glyph is what's pinned near the top instead, vertically centered
+  // *within that top band* rather than across the entire (often much
+  // taller, many-rows) table — on a long table, centering it across the
+  // whole thing put the glyph wherever that full-height midpoint happened
+  // to land, next to some arbitrary row rather than reading as
+  // intentional. `line-height` matching the header row's own rendered
+  // height (th's 12px padding × 2 + its line box ≈ 44px) is what centers
+  // a single line of generated text within just that first band — a
+  // fixed `height` would also clip the gradient below it, which still
+  // needs the box's full top:0/bottom:0 span; `flex`/`align-items` centers
+  // within the *whole* box's height, not a sub-region of it, so neither
+  // gets this right on its own the way `line-height` does here.
   &::before,
   &::after {
     position: absolute;
     top: 0;
-    bottom: 12px;
+    bottom: 0;
     width: 56px;
-    display: flex;
-    align-items: center;
+    line-height: 44px;
     pointer-events: none;
     opacity: 0;
     transition: opacity $prism-transition-fast;
@@ -72,7 +86,7 @@
   &::before {
     content: "‹";
     left: 0;
-    justify-content: flex-start;
+    text-align: left;
     padding-left: 4px;
     background: linear-gradient(to right, rgba($prism-color-primary, 0.22), transparent);
     animation: prism-scroll-hint-left 1.4s ease-in-out infinite;
@@ -81,7 +95,7 @@
   &::after {
     content: "›";
     right: 0;
-    justify-content: flex-end;
+    text-align: right;
     padding-right: 4px;
     background: linear-gradient(to left, rgba($prism-color-primary, 0.22), transparent);
     animation: prism-scroll-hint-right 1.4s ease-in-out infinite;
