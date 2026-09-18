@@ -863,3 +863,71 @@ function prismTitlebarActionsRow() {
     }
   });
 })();
+
+// Horizontal-scroll affordance for the index table. ActiveAdmin renders
+// the table (or grid/block index) inside ".index_content"
+// (lib/active_admin/views/pages/index.rb#render_index) — a sibling of
+// the pagination/download-links footer (`#index_footer`), not an
+// ancestor of it, both nested inside a shared outer container
+// (".paginated_collection_contents"). Scoping the scroll to
+// ".index_content" itself (scss-src/_tables.scss), rather than that
+// outer container, is what keeps the footer in place instead of
+// dragging it sideways out of view along with the table — it has no
+// columns to align with anything anyway. A table simply cut off flush
+// at ".index_content"'s edge otherwise looks identical whether there's
+// one hidden column past it or ten, with nothing telling a visitor
+// scrolling is even possible — so this also toggles two classes
+// (".prism-scroll-left"/".prism-scroll-right") that scss-src/_tables.scss
+// fades a shadow in/out on, on whichever edge(s) still have more to
+// scroll toward, same "scroll shadow" pattern as Gmail/Trello's own
+// tables. That part has to be class-toggling JS, not a pure-CSS trick,
+// since it depends on the *current* scroll position, not just whether
+// the element happens to be scrollable at all.
+(function () {
+  "use strict";
+
+  function updateShadows(el) {
+    var maxScroll = el.scrollWidth - el.clientWidth;
+    // A 1px tolerance, not a bare 0/maxScroll comparison — fractional
+    // scrollLeft values (sub-pixel positions at some zoom levels/DPRs)
+    // mean it can land a hair short of either end, which would otherwise
+    // leave a shadow that never fully clears at that edge.
+    el.classList.toggle("prism-scroll-left", el.scrollLeft > 1);
+    el.classList.toggle("prism-scroll-right", el.scrollLeft < maxScroll - 1);
+  }
+
+  function wire(el) {
+    updateShadows(el);
+    el.addEventListener("scroll", function () {
+      updateShadows(el);
+    });
+
+    // Same reasoning as alignToTable's own ResizeObserver above: the
+    // table's width can settle after DOMContentLoaded (a scrollbar
+    // appearing, webfonts, a column's content changing after a filter)
+    // without the window itself ever resizing, so plain "resize"/"load"
+    // listeners can miss it. Observing its content, not just the
+    // container (whose own box size is unaffected by its scrollable
+    // content growing), is what actually catches that.
+    if (typeof ResizeObserver !== "undefined") {
+      var observer = new ResizeObserver(function () {
+        updateShadows(el);
+      });
+      observer.observe(el);
+      Array.prototype.forEach.call(el.children, function (child) {
+        observer.observe(child);
+      });
+    } else {
+      window.addEventListener("load", function () {
+        updateShadows(el);
+      });
+      window.addEventListener("resize", function () {
+        updateShadows(el);
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".paginated_collection_contents > .index_content").forEach(wire);
+  });
+})();

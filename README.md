@@ -12,7 +12,7 @@ theme, troubleshooting). This README is a quick start.
 ## Live demo
 
 A live demo dashboard is running at
-**[prism-demo.onrender.com/admin](https://prism-demo.onrender.com/admin)**:
+**[prism-demo.onrender.com/admin](https://prism-demo.onrender.com/admin/login)**:
 
 ```
 Username: admin@example.com

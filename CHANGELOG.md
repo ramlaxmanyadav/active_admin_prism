@@ -66,6 +66,11 @@
   parent's own submenu is force-hidden by CSS while collapsed regardless
   of its "open" class, so without this, clicking one did nothing visible
   at all.
+- An index table wider than its container (many columns, a narrow
+  viewport) now fades in a subtle shadow on whichever edge still has
+  more columns to scroll toward, clearing once scrolled all the way to
+  that side — a table simply cut off flush at the container's edge
+  otherwise gave no indication scrolling was even possible.
 
 ## 0.1.3
 

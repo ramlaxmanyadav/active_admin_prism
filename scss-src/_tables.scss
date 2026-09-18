@@ -1,8 +1,106 @@
-// ActiveAdmin wraps the index table + pagination in this container —
-// letting it scroll horizontally, rather than the columns visually
-// colliding, is the robust fallback on narrow viewports.
-.paginated_collection_contents {
+// ActiveAdmin wraps the index table + pagination/download-links footer
+// (`#index_footer`) together in ".paginated_collection_contents", but the
+// table itself (or grid/block index, for `config.index_as :grid`/etc.)
+// renders inside a narrower ".index_content" div nested inside that —
+// a sibling of `#index_footer`, not an ancestor of it (see ActiveAdmin
+// core's own lib/active_admin/views/pages/index.rb#render_index). Scoping
+// the scroll to ".index_content" instead of the outer container means
+// only the table itself scrolls horizontally on a narrow viewport/wide
+// table, not the footer sitting under it, which has no columns to align
+// with anything and would otherwise scroll off out of sync with what
+// it's describing.
+.index_content {
+  position: relative;
   overflow-x: auto;
+
+  // A native scrollbar is the one scroll affordance every visitor
+  // already recognizes on sight — thin/auto-hiding trackpad-style
+  // scrollbars (this gem's default OS/browser behavior otherwise) don't
+  // read that way until actively dragged. Made permanently visible,
+  // thick, and brand-colored instead, so its mere presence — not just
+  // the shadow/chevron below — already says "this scrolls".
+  scrollbar-width: auto;
+  scrollbar-color: $prism-color-primary rgba($prism-color-primary, 0.12);
+
+  &::-webkit-scrollbar {
+    height: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba($prism-color-primary, 0.12);
+    border-radius: $prism-radius-pill;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $prism-color-primary;
+    border-radius: $prism-radius-pill;
+    border: 2px solid $prism-bg-card;
+
+    &:hover {
+      background: $prism-color-primary-dark;
+    }
+  }
+
+  // Scroll-shadow-plus-chevron affordance (js-src/prism.js toggles the
+  // two classes below based on actual scroll position) — a table simply
+  // cut off flush at this wrapper's edge otherwise looks identical
+  // whether there's more hidden past it or not. A colored (not just
+  // gray) gradient, a bold bouncing chevron (`content` renders it as
+  // real generated text, no extra markup needed), and a
+  // `drop-shadow` for legibility over any cell content are deliberately
+  // more assertive than a plain subtle fade — paired with the scrollbar
+  // above, this is meant to be unmissable, not merely present if you
+  // look closely.
+  &::before,
+  &::after {
+    position: absolute;
+    top: 0;
+    bottom: 12px;
+    width: 56px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity $prism-transition-fast;
+    z-index: 2;
+    font-size: 26px;
+    font-weight: 700;
+    color: $prism-color-primary-dark;
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.9));
+  }
+
+  &::before {
+    content: "‹";
+    left: 0;
+    justify-content: flex-start;
+    padding-left: 4px;
+    background: linear-gradient(to right, rgba($prism-color-primary, 0.22), transparent);
+    animation: prism-scroll-hint-left 1.4s ease-in-out infinite;
+  }
+
+  &::after {
+    content: "›";
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 4px;
+    background: linear-gradient(to left, rgba($prism-color-primary, 0.22), transparent);
+    animation: prism-scroll-hint-right 1.4s ease-in-out infinite;
+  }
+
+  &.prism-scroll-left::before,
+  &.prism-scroll-right::after {
+    opacity: 1;
+  }
+}
+
+@keyframes prism-scroll-hint-left {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-6px); }
+}
+
+@keyframes prism-scroll-hint-right {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
 }
 
 table.index_table {
