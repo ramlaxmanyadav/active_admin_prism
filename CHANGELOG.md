@@ -15,16 +15,26 @@
   in `lib/prism_icons.rb`; anything else falls back to a generic one.
   `#sidebar` itself now only squeezes while *every* section agrees to
   stay collapsed, reflowing back to full width the moment any one of them
-  opens.
+  opens. With two or more collapsible sections, a stack of individually
+  collapsed icon buttons has nowhere near enough room in the 72px gutter
+  that assumes just one — so instead, a single labeled Select2 dropdown
+  ("Panels") renders at the top of the sidebar; picking one opens it
+  (closing every other section) and reflows the table the same as before.
+  A page with just the one Filters section (the common case) is
+  completely unaffected — its own plain icon button keeps working exactly
+  as it always has.
 - A title bar with more than `action_items_dropdown_threshold` (default:
   3) `action_item` buttons now collapses all of them into a single
-  "Actions" dropdown instead of rendering a multi-row wall of individual
+  Select2 "jump menu" instead of rendering a multi-row wall of individual
   buttons — a resource registering a dozen+ CSV upload / bulk-action
-  links is a real example this was built for. Purely client-side: it
-  moves each existing action_item element as-is into the dropdown, so
-  whatever a host's own `action_item` block rendered — a plain link, a
-  `button_to` form, anything — keeps working unmodified inside it. Set
-  `config.action_items_dropdown = false` to always render every
+  links is a real example this was built for. Picking an option fires
+  that action immediately (a plain link navigates, a `button_to` form
+  submits — whatever it actually was, `data-confirm`/`data-method`
+  included) and resets right back to its placeholder. Purely client-side:
+  it moves each existing action_item element as-is into a hidden holding
+  area and `.click()`s the real trigger inside it, so whatever a host's
+  own `action_item` block rendered keeps working completely unmodified.
+  Set `config.action_items_dropdown = false` to always render every
   action_item inline, matching this gem's behavior before this flag
   existed.
 

@@ -644,6 +644,18 @@ opens. Turn it off with `config.collapsible_filters = false` to always
 show every section fully expanded, matching ActiveAdmin's own default
 (and the table/content area at its normal, non-reflowing width).
 
+Once there are **two or more** collapsible sections on the same page (say,
+Filters plus a custom "More Actions" block), a stack of individually
+collapsed icon buttons has nowhere near enough room in the 72px gutter
+that assumes just one — so instead, a single labeled Select2 dropdown
+("Panels") renders at the top of the sidebar, listing every section by
+its own title; picking one opens it (and closes every other section —
+one panel visible at a time) and reflows the table just like before.
+A section's own header still opens/closes it directly too, keeping the
+dropdown in sync either way. A page with just the one Filters section
+(the common case) is completely unaffected — its own plain icon button
+keeps working exactly as it always has, no dropdown involved.
+
 The reflow relies on the CSS `:has()` selector (broadly supported in
 current browsers); without it, sections still collapse/expand correctly,
 the reflow just won't reclaim the extra width.
@@ -651,18 +663,25 @@ the reflow just won't reclaim the extra width.
 ### Consolidated action items
 
 A title bar with more than `action_items_dropdown_threshold` (default:
-`3`) `action_item` buttons collapses all of them into a single "Actions"
-dropdown instead of a multi-row wall of individual buttons — a resource
-registering a dozen+ CSV upload / bulk-action links is a real example this
-was built for. It's purely client-side DOM restructuring: `prism.js` moves
-each existing `action_item` element as-is (not a clone) into the
-dropdown's menu, so whatever a host's own `action_item` block rendered —
-a plain `link_to`, a `button_to` form, anything — keeps working
-unmodified inside it. A page with only a couple of action items (a lone
-"New Resource" button, say) is left untouched, rendering inline exactly
-as ActiveAdmin does by default — the threshold exists so this only kicks
-in for pages that actually need it. Turn it off entirely with
-`config.action_items_dropdown = false`, or raise/lower
+`3`) `action_item` buttons collapses all of them into a single Select2
+"jump menu" instead of a multi-row wall of individual buttons — a
+resource registering a dozen+ CSV upload / bulk-action links is a real
+example this was built for. Picking an option fires that action
+immediately (a plain `link_to` navigates, a `button_to` form submits —
+whatever it actually was, including its own `data-confirm`/`data-method`)
+and the dropdown resets right back to its placeholder, ready for the next
+pick — it's a trigger, not a persistent selection. Purely client-side DOM
+restructuring: `prism.js` moves each existing `action_item` element as-is
+(not a clone) into a hidden holding area and `.click()`s the real
+`<a>`/`<button>` inside it on selection, so whatever a host's own
+`action_item` block rendered keeps working completely unmodified. Select2
+itself is always available for this regardless of `config.select2` (that
+flag only controls auto-enhancing a *host's* own selects) — the library
+ships in this gem's JS either way. A page with only a couple of action
+items (a lone "New Resource" button, say) is left untouched, rendering
+inline exactly as ActiveAdmin does by default — the threshold exists so
+this only kicks in for pages that actually need it. Turn it off entirely
+with `config.action_items_dropdown = false`, or raise/lower
 `config.action_items_dropdown_threshold` to change how many buttons it
 takes before consolidation kicks in.
 
@@ -1063,30 +1082,66 @@ anything Prism itself renders:
     li.select2-results__message             <- "No results found" etc.
 ```
 
-### Filters sidebar panel (`#filters_sidebar_section`)
+### Collapsible sidebar sections (`.prism-collapsible-panel`)
 
-Only this specific `SidebarSection` (AA's built-in id for the Filters
-panel) gets the extra icon/collapse markup — any other sidebar section
-(dashboard panels, a host's own `sidebar :title do ... end`) is untouched:
+Every `SidebarSection` gets this markup — not just AA's built-in Filters
+panel; a host's own `sidebar "Title" do ... end` block gets it too:
 
 ```
 #sidebar                                <- AA's own right-hand content sidebar (not Prism's left nav)
-  .panel#filters_sidebar_section.prism-collapsible-panel[.open]
+  .panel.prism-collapsible-panel[#filters_sidebar_section][.open]
     > h3                                <- the icon-only button when collapsed
-      svg.prism-filter-icon
+      svg.prism-filter-icon             <- :filter for Filters, :list (or your own `icon:`) otherwise
       span.prism-filter-label           <- visually hidden (max-width:0) while collapsed
     .panel_contents                     <- max-height:0 while collapsed, animates open
-      form.filter_form
+      form.filter_form                  <- Filters section specifically
         .filter_form_field[.select_and_search][.filter_date_range]
 ```
 
 `.prism-collapsible-panel` and the icon/label markup are only added when
-`config.collapsible_filters` is `true`; `prism.js` mirrors the panel's
-`.open` state onto `body.prism-filters-open`, which is what
-`#active_admin_content`/`#sidebar`'s reflow rules key off (`:has()` — see
-[Collapsible "Filters" sidebar](#collapsible-filters-sidebar)). With the config `false`,
-`body.prism-filters-collapsible-disabled` is the backstop class that forces
-the panel back to always-expanded.
+`config.collapsible_filters` is `true`; `prism.js` mirrors the Filters
+section's `.open` state onto `body.prism-filters-open` specifically (kept
+for any host CSS already keying off it), but `#active_admin_content`/
+`#sidebar`'s own reflow rule keys off *any* section's `.open` via `:has()`
+instead — see [Collapsible "Filters" sidebar](#collapsible-filters-sidebar).
+With the config `false`, `body.prism-filters-collapsible-disabled` is the
+backstop class that forces every section back to always-expanded.
+
+With two or more collapsible sections, `prism.js` also adds this instead,
+as the first child of `#sidebar`:
+
+```
+#sidebar.prism-sidebar-multi-panel
+  .prism-sidebar-panel-select-wrapper
+    span.prism-sidebar-panel-select-label   <- "Panels"
+    select.prism-sidebar-panel-select       <- Select2-enhanced; one <option> per section, by title
+```
+
+Selecting an option opens that section and closes every other one; each
+section's own `> h3` (above) is hidden via CSS while collapsed in this
+mode (`#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open) > h3`) —
+the dropdown is the only way to open one, though a section's own header
+still works to close it again once open.
+
+### Consolidated action items markup (`.prism-action-items-dropdown`)
+
+Only present once `action_item` count exceeds
+`config.action_items_dropdown_threshold` (see
+[Consolidated action items](#consolidated-action-items)):
+
+```
+#titlebar_right[data-prism-action-items-threshold]
+  div.action_items
+    span.prism-action-items-dropdown
+      select.prism-action-items-select      <- Select2-enhanced; one <option> per action_item, by its link/button text
+      div.prism-action-items-holding[hidden]
+        span.action_item                    <- every original action_item element, moved here as-is, never shown
+          a / form                          <- whatever a host's own action_item block rendered, untouched
+```
+
+Selecting an option finds the real `<a>`/`<button>`/`<input type=submit>`
+inside the matching `.action_item` in `.prism-action-items-holding` and
+`.click()`s it directly, then resets the select back to its placeholder.
 
 ### Active filters bar (`#prism_active_filters_bar`)
 

@@ -367,6 +367,8 @@
 (function () {
   "use strict";
 
+  var onOpenChange = null;
+
   function setOpen(section, toggle, open) {
     section.classList.toggle("open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
@@ -381,6 +383,7 @@
     if (section.id === "filters_sidebar_section") {
       document.body.classList.toggle("prism-filters-open", open);
     }
+    if (onOpenChange) onOpenChange();
   }
 
   function wireUp(section) {
@@ -403,20 +406,108 @@
     return toggle;
   }
 
+  // Once there are 2+ collapsible sections, a stack of individually
+  // collapsed icon buttons has nowhere near enough room in the 72px
+  // gutter that assumes just one (Filters). Consolidates them instead
+  // into a single labeled Select2 "jump to a panel" dropdown at the top
+  // of #sidebar — picking one opens it and closes every other section
+  // (single panel visible at a time); a section's own header still opens/
+  // closes it directly too, syncing the dropdown's value either way. A
+  // single collapsible section (just Filters, the common case) is
+  // untouched — its own plain icon button keeps working exactly as
+  // before, no dropdown involved at all.
+  function buildPanelSelect(sidebar, sections) {
+    if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
+
+    sidebar.classList.add("prism-sidebar-multi-panel");
+
+    var wrapper = document.createElement("div");
+    wrapper.className = "prism-sidebar-panel-select-wrapper";
+
+    var label = document.createElement("span");
+    label.className = "prism-sidebar-panel-select-label";
+    label.textContent = "Panels";
+    label.id = "prism-sidebar-panel-select-label";
+
+    var select = document.createElement("select");
+    select.className = "prism-sidebar-panel-select";
+    select.setAttribute("aria-labelledby", label.id);
+    // A real leading <option value=""> is what lets Select2 show a
+    // placeholder on a *single* select, and (with allowClear) is what
+    // "x" resets to — closing every section, back to a fully collapsed
+    // gutter with nothing open.
+    select.appendChild(document.createElement("option"));
+
+    var openIndex = -1;
+    sections.forEach(function (entry, index) {
+      var option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = entry.section.getAttribute("data-prism-panel-title") || "Panel " + (index + 1);
+      select.appendChild(option);
+      if (entry.section.classList.contains("open")) openIndex = index;
+    });
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(select);
+    sidebar.insertBefore(wrapper, sidebar.firstChild);
+
+    var $select = jQuery(select).select2({
+      width: "100%",
+      placeholder: "Select a panel",
+      allowClear: true,
+      minimumResultsForSearch: 6
+    });
+
+    if (openIndex >= 0) $select.val(String(openIndex)).trigger("change");
+
+    $select.on("select2:select", function (event) {
+      var index = parseInt(event.params.data.id, 10);
+      sections.forEach(function (entry, i) {
+        setOpen(entry.section, entry.toggle, i === index);
+      });
+    });
+
+    $select.on("select2:clear", function () {
+      sections.forEach(function (entry) {
+        setOpen(entry.section, entry.toggle, false);
+      });
+    });
+
+    // Keeps the dropdown in sync when a section is opened/closed some
+    // other way (its own header, or the active-filters-bar shortcut
+    // below) instead of through this dropdown.
+    onOpenChange = function () {
+      var current = sections.filter(function (entry) {
+        return entry.section.classList.contains("open");
+      })[0];
+      var index = current ? String(sections.indexOf(current)) : "";
+      if ($select.val() !== index) $select.val(index).trigger("change");
+    };
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     if (document.body.classList.contains("prism-filters-collapsible-disabled")) return;
 
+    var sidebar = document.getElementById("sidebar");
     var filtersSection = document.getElementById("filters_sidebar_section");
     var filtersToggle = null;
+    var sections = [];
 
     document.querySelectorAll(".prism-collapsible-panel").forEach(function (section) {
       var toggle = wireUp(section);
+      if (!toggle) return;
       if (section === filtersSection) filtersToggle = toggle;
+
+      var titleEl = toggle.querySelector(".prism-filter-label");
+      section.setAttribute("data-prism-panel-title", titleEl ? titleEl.textContent : section.id);
+      sections.push({ section: section, toggle: toggle });
     });
 
     if (filtersSection) {
       document.body.classList.toggle("prism-filters-open", filtersSection.classList.contains("open"));
     }
+
+    if (sidebar && sections.length > 1) buildPanelSelect(sidebar, sections);
 
     // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
     // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
@@ -524,23 +615,32 @@
 
 // Consolidates a title bar with many `action_item` buttons (a resource
 // that registers a dozen+ CSV upload / bulk-action links is a real
-// example this was built for) into a single "Actions" dropdown instead of
-// a multi-row wall of individual buttons. See
+// example this was built for) into a single Select2 "jump menu" instead
+// of a multi-row wall of individual buttons. See
 // ActiveAdminPrism::Configuration#action_items_dropdown/
 // #action_items_dropdown_threshold and lib/active_admin/views/title_bar.rb
 // for the Ruby side (the "data-prism-action-items-threshold" attribute
 // this reads — its mere presence also means #action_items_dropdown is
-// on). Purely client-side DOM restructuring: it moves each existing
-// `.action_item` element as-is (not a clone) into the dropdown's menu, so
+// on). Purely client-side DOM restructuring: each existing `.action_item`
+// element is moved as-is (not a clone) into a hidden holding area, so
 // whatever Ruby/Arbre content a host's own `action_item` block rendered —
-// a plain link, a button_to form, anything — keeps working unmodified
-// inside it.
+// a plain link, a `button_to` form (its own data-method/data-confirm
+// included), anything — keeps working completely unmodified; selecting an
+// option here just finds and `.click()`s the real trigger inside it,
+// rather than this file trying to reimplement navigation/submission
+// itself. Select2 (vendor/select2/select2.full.min.js) is concatenated
+// into this same compiled asset regardless of
+// ActiveAdminPrism.configuration.select2 (that flag only controls
+// auto-enhancing a *host's own* selects) — jQuery itself is always
+// present too, since ActiveAdmin's own base.js already depends on it —
+// so both are always available here with no extra host setup.
 (function () {
   "use strict";
 
   document.addEventListener("DOMContentLoaded", function () {
     var right = document.getElementById("titlebar_right");
     if (!right || !right.dataset.prismActionItemsThreshold) return;
+    if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
 
     var threshold = parseInt(right.dataset.prismActionItemsThreshold, 10);
     var container = right.querySelector(":scope > .action_items");
@@ -549,45 +649,53 @@
     var items = Array.prototype.slice.call(container.querySelectorAll(":scope > .action_item"));
     if (items.length <= threshold) return;
 
-    var dropdown = document.createElement("span");
-    dropdown.className = "prism-action-items-dropdown";
+    var wrapper = document.createElement("span");
+    wrapper.className = "prism-action-items-dropdown";
 
-    var toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "prism-action-items-toggle";
-    toggle.setAttribute("aria-haspopup", "true");
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.textContent = "Actions (" + items.length + ")";
+    var holding = document.createElement("div");
+    holding.className = "prism-action-items-holding";
+    holding.hidden = true;
 
-    var menu = document.createElement("ul");
-    menu.className = "prism-action-items-menu";
+    var select = document.createElement("select");
+    select.className = "prism-action-items-select";
+    // A real leading <option value=""> (kept selected, non-removable via
+    // Select2's "x") is what lets Select2 show a placeholder on a
+    // *single* select at all — see its own docs on this requirement.
+    select.appendChild(document.createElement("option"));
 
-    items.forEach(function (item) {
-      var li = document.createElement("li");
-      li.appendChild(item);
-      menu.appendChild(li);
+    items.forEach(function (item, index) {
+      var trigger = item.querySelector("a, button, input[type=submit]");
+      var label = trigger ? (trigger.value || trigger.textContent) : item.textContent;
+
+      var option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = (label || "").trim();
+      select.appendChild(option);
+
+      item.dataset.prismActionItemsIndex = String(index);
+      holding.appendChild(item);
     });
 
-    dropdown.appendChild(toggle);
-    dropdown.appendChild(menu);
-    container.appendChild(dropdown);
+    wrapper.appendChild(select);
+    wrapper.appendChild(holding);
+    container.appendChild(wrapper);
 
-    function close() {
-      dropdown.classList.remove("open");
-      toggle.setAttribute("aria-expanded", "false");
-    }
-
-    toggle.addEventListener("click", function (event) {
-      event.stopPropagation();
-      var open = dropdown.classList.toggle("open");
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    var $select = jQuery(select).select2({
+      width: "220px",
+      placeholder: "Actions (" + items.length + ")",
+      minimumResultsForSearch: 6
     });
 
-    document.addEventListener("click", function (event) {
-      if (!dropdown.contains(event.target)) close();
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") close();
+    $select.on("select2:select", function (event) {
+      var index = event.params.data.id;
+      var item = holding.querySelector('[data-prism-action-items-index="' + index + '"]');
+      var trigger = item && item.querySelector("a, button, input[type=submit]");
+      if (trigger) trigger.click();
+      // Resets to the placeholder right away rather than showing the just-
+      // picked label — this is a jump menu (fires an action), not a
+      // persistent filter/setting, so there's nothing meaningful for it to
+      // stay "set" to.
+      $select.val("").trigger("change");
     });
   });
 })();
