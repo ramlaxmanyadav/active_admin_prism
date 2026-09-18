@@ -352,50 +352,71 @@
   });
 })();
 
-// "Filters" sidebar panel: collapses to a single icon button, expanding to
-// the full form on click. See scss-src/_panels.scss (#filters_sidebar_section)
-// for the actual collapse/expand styling — this only toggles the ".open"
-// class an inline click responds to. Skipped entirely when
+// Collapsible sidebar sections: collapse to a single icon button by
+// default, expanding to the full panel on click. See
+// scss-src/_panels.scss (.prism-collapsible-panel) for the actual
+// collapse/expand styling — this only toggles a section's own ".open"
+// class an inline click responds to. Applies to every section, not just
+// Filters — see lib/active_admin/views/filters_sidebar.rb, which
+// generalized this from a Filters-only treatment to cover any sidebar
+// section, including a host's own custom `sidebar "Title" do ... end`
+// block. Skipped entirely when
 // ActiveAdminPrism.configuration.collapsible_filters is false (the
 // "prism-filters-collapsible-disabled" body class, set in
 // lib/active_admin/views/flash_messages.rb#body_classes).
 (function () {
   "use strict";
 
-  document.addEventListener("DOMContentLoaded", function () {
-    if (document.body.classList.contains("prism-filters-collapsible-disabled")) return;
+  function setOpen(section, toggle, open) {
+    section.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    // The Filters section specifically also mirrors its state onto
+    // <body> — #main_content (the table/grid area) is a *sibling* of
+    // #sidebar, not a descendant of this section, so CSS can't reach
+    // across siblings any other way. scss-src/_panels.scss's own
+    // #sidebar width reflow no longer needs this (that rule now reacts
+    // to ANY section's ".open" via ":has()" instead of this one
+    // specifically), but a host's own CSS may already key off this
+    // documented class, so it's kept.
+    if (section.id === "filters_sidebar_section") {
+      document.body.classList.toggle("prism-filters-open", open);
+    }
+  }
 
-    var section = document.getElementById("filters_sidebar_section");
-    if (!section) return;
-
+  function wireUp(section) {
     var toggle = section.querySelector(":scope > h3");
-    if (!toggle) return;
+    if (!toggle) return null;
 
     toggle.setAttribute("role", "button");
     toggle.setAttribute("tabindex", "0");
     toggle.setAttribute("aria-expanded", section.classList.contains("open") ? "true" : "false");
-    // Mirrored onto <body> because #main_content (the table/grid area)
-    // is a *sibling* of #sidebar, not a descendant of this section — CSS
-    // can't reach across siblings, so scss-src/_panels.scss keys the
-    // #main_content/#sidebar width reflow off this body class instead.
-    document.body.classList.toggle("prism-filters-open", section.classList.contains("open"));
 
-    function setOpen(open) {
-      section.classList.toggle("open", open);
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      document.body.classList.toggle("prism-filters-open", open);
-    }
-
-    function toggleOpen() {
-      setOpen(!section.classList.contains("open"));
-    }
-
-    toggle.addEventListener("click", toggleOpen);
+    toggle.addEventListener("click", function () {
+      setOpen(section, toggle, !section.classList.contains("open"));
+    });
     toggle.addEventListener("keydown", function (event) {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      toggleOpen();
+      setOpen(section, toggle, !section.classList.contains("open"));
     });
+
+    return toggle;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (document.body.classList.contains("prism-filters-collapsible-disabled")) return;
+
+    var filtersSection = document.getElementById("filters_sidebar_section");
+    var filtersToggle = null;
+
+    document.querySelectorAll(".prism-collapsible-panel").forEach(function (section) {
+      var toggle = wireUp(section);
+      if (section === filtersSection) filtersToggle = toggle;
+    });
+
+    if (filtersSection) {
+      document.body.classList.toggle("prism-filters-open", filtersSection.classList.contains("open"));
+    }
 
     // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
     // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
@@ -405,7 +426,7 @@
     // sticky the way the left nav is and can scroll out of view on a
     // long table.
     var activeFiltersBar = document.getElementById("prism_active_filters_bar");
-    if (activeFiltersBar) {
+    if (activeFiltersBar && filtersSection && filtersToggle) {
       activeFiltersBar.setAttribute("role", "button");
       activeFiltersBar.setAttribute("tabindex", "0");
       activeFiltersBar.setAttribute("aria-label", "Show filters");
@@ -413,8 +434,8 @@
       var openFromBar = function (event) {
         if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
         if (event.type === "keydown") event.preventDefault();
-        setOpen(true);
-        section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        setOpen(filtersSection, filtersToggle, true);
+        filtersSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
       };
 
       activeFiltersBar.addEventListener("click", openFromBar);
@@ -497,6 +518,76 @@
       var $select = $(this);
       if ($select.data("select2")) return;
       $select.select2({ width: "100%" });
+    });
+  });
+})();
+
+// Consolidates a title bar with many `action_item` buttons (a resource
+// that registers a dozen+ CSV upload / bulk-action links is a real
+// example this was built for) into a single "Actions" dropdown instead of
+// a multi-row wall of individual buttons. See
+// ActiveAdminPrism::Configuration#action_items_dropdown/
+// #action_items_dropdown_threshold and lib/active_admin/views/title_bar.rb
+// for the Ruby side (the "data-prism-action-items-threshold" attribute
+// this reads — its mere presence also means #action_items_dropdown is
+// on). Purely client-side DOM restructuring: it moves each existing
+// `.action_item` element as-is (not a clone) into the dropdown's menu, so
+// whatever Ruby/Arbre content a host's own `action_item` block rendered —
+// a plain link, a button_to form, anything — keeps working unmodified
+// inside it.
+(function () {
+  "use strict";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var right = document.getElementById("titlebar_right");
+    if (!right || !right.dataset.prismActionItemsThreshold) return;
+
+    var threshold = parseInt(right.dataset.prismActionItemsThreshold, 10);
+    var container = right.querySelector(":scope > .action_items");
+    if (!threshold || !container) return;
+
+    var items = Array.prototype.slice.call(container.querySelectorAll(":scope > .action_item"));
+    if (items.length <= threshold) return;
+
+    var dropdown = document.createElement("span");
+    dropdown.className = "prism-action-items-dropdown";
+
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "prism-action-items-toggle";
+    toggle.setAttribute("aria-haspopup", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.textContent = "Actions (" + items.length + ")";
+
+    var menu = document.createElement("ul");
+    menu.className = "prism-action-items-menu";
+
+    items.forEach(function (item) {
+      var li = document.createElement("li");
+      li.appendChild(item);
+      menu.appendChild(li);
+    });
+
+    dropdown.appendChild(toggle);
+    dropdown.appendChild(menu);
+    container.appendChild(dropdown);
+
+    function close() {
+      dropdown.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+
+    toggle.addEventListener("click", function (event) {
+      event.stopPropagation();
+      var open = dropdown.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    document.addEventListener("click", function (event) {
+      if (!dropdown.contains(event.target)) close();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") close();
     });
   });
 })();

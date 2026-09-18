@@ -135,6 +135,8 @@ ActiveAdminPrism.configure do |config|
   config.menu_search = true                # default: true
   config.select2 = false                   # default: false (opt-in — see below)
   config.sidebar_collapsible = true        # default: true
+  config.action_items_dropdown = true      # default: true
+  config.action_items_dropdown_threshold = 3  # default: 3
 end
 
 ActiveAdminPrism.enable!
@@ -161,6 +163,8 @@ ActiveAdminPrism.enable!
 | `menu_search`                    | `true`  | No search box renders above the sidebar's "Pages" nav — see [Menu search](#menu-search). |
 | `select2`                        | `false` | **Opposite polarity from every other flag above — opt-in, not opt-out.** `false` (the default) leaves every `<select>` exactly as ActiveAdmin renders it. `true` auto-enhances *every* plain `<select>` (filters, form inputs, association pickers — no per-field setup) into a searchable Select2 widget — see [Select2](#select2). |
 | `sidebar_collapsible`             | `true`  | No hamburger toggle button renders next to the brand — the sidebar is always full width, with no way to collapse it to an icon-only rail. Desktop-only either way; the mobile off-canvas toggle is unaffected — see [Collapsible sidebar rail](#collapsible-sidebar-rail). |
+| `action_items_dropdown`          | `true`  | Every `action_item` always renders inline in the title bar, however many there are — no "Actions" dropdown consolidation. See [Consolidated action items](#consolidated-action-items). |
+| `action_items_dropdown_threshold` | `3`     | How many `action_item`s a title bar can have before `action_items_dropdown` (if on) collapses them into a dropdown. |
 
 **How this crosses the server/client boundary.** `sidebar`,
 `colorize_action_icons`, and the `login_*` flags are pure server-side
@@ -626,17 +630,41 @@ jquery-rails/jquery-ujs. Turn off with `config.styled_confirms = false`.
 The "Filters" panel (ActiveAdmin's `filters_sidebar_section`) starts
 collapsed to a single filter-icon button; clicking it expands the full form
 in place (also keyboard-accessible — Enter/Space toggle it, and it exposes
-`aria-expanded`). The index table/main content area reflows to reclaim the
-freed-up width while collapsed, and gives it back when expanded. No setup
-needed, and it only targets that specific panel — any other sidebar section
-(dashboard panels, custom `sidebar :title do ... end` blocks) is untouched.
-Turn it off with `config.collapsible_filters = false` to always show it
-fully expanded, matching ActiveAdmin's own default (and the table/content
-area at its normal, non-reflowing width).
+`aria-expanded`). Every *other* sidebar section gets the exact same
+treatment too — dashboard panels, ActiveAdmin's own "Search status"
+panel (when `active_filters_bar` is off), and any custom
+`sidebar "Title" do ... end` block a host registers — each collapsing to
+its own icon button independently. Pass your own icon via
+`sidebar "More Actions", icon: :list do ... end` (any name from
+`lib/prism_icons.rb`); anything else falls back to a generic one (`:filter`
+for the Filters section specifically, `:list` otherwise). The index
+table/main content area reflows to reclaim the freed-up width while
+*every* section is collapsed, giving it back the moment any one of them
+opens. Turn it off with `config.collapsible_filters = false` to always
+show every section fully expanded, matching ActiveAdmin's own default
+(and the table/content area at its normal, non-reflowing width).
 
 The reflow relies on the CSS `:has()` selector (broadly supported in
-current browsers); without it, the Filters panel still collapses/expands
-correctly, it just won't reclaim the extra width.
+current browsers); without it, sections still collapse/expand correctly,
+the reflow just won't reclaim the extra width.
+
+### Consolidated action items
+
+A title bar with more than `action_items_dropdown_threshold` (default:
+`3`) `action_item` buttons collapses all of them into a single "Actions"
+dropdown instead of a multi-row wall of individual buttons — a resource
+registering a dozen+ CSV upload / bulk-action links is a real example this
+was built for. It's purely client-side DOM restructuring: `prism.js` moves
+each existing `action_item` element as-is (not a clone) into the
+dropdown's menu, so whatever a host's own `action_item` block rendered —
+a plain `link_to`, a `button_to` form, anything — keeps working
+unmodified inside it. A page with only a couple of action items (a lone
+"New Resource" button, say) is left untouched, rendering inline exactly
+as ActiveAdmin does by default — the threshold exists so this only kicks
+in for pages that actually need it. Turn it off entirely with
+`config.action_items_dropdown = false`, or raise/lower
+`config.action_items_dropdown_threshold` to change how many buttons it
+takes before consolidation kicks in.
 
 ### Active filters bar
 

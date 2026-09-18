@@ -13,6 +13,7 @@ require_relative "active_admin/views/index_table_actions"
 require_relative "active_admin/views/flash_messages"
 require_relative "active_admin/views/filters_sidebar"
 require_relative "active_admin/views/active_filters_bar"
+require_relative "active_admin/views/title_bar"
 require_relative "formtastic/inputs/prism_toggle_input"
 
 module ActiveAdminPrism

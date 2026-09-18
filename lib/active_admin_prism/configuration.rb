@@ -183,6 +183,25 @@ module ActiveAdminPrism
     # before this flag existed.
     attr_accessor :sidebar_collapsible
 
+    # Whether a title bar with more than #action_items_dropdown_threshold
+    # `action_item` buttons collapses them into a single "Actions"
+    # dropdown instead of rendering every one inline. A resource that
+    # registers many (a dozen+ CSV upload / bulk-action links is a real
+    # example this was built for) turns the title bar into a multi-row
+    # wall of buttons otherwise — see js-src/prism.js's action-items
+    # handler, which does the actual consolidation client-side, and
+    # lib/active_admin/views/title_bar.rb for the threshold this reads.
+    # false never consolidates — every action_item always renders inline,
+    # matching this gem's behavior before this flag existed.
+    attr_accessor :action_items_dropdown
+
+    # How many `action_item`s a title bar can have before
+    # #action_items_dropdown (if true) collapses all of them into a
+    # dropdown — a page with just a "New Resource" button (or that plus
+    # one custom action) is common enough that a low threshold would
+    # dropdown-ify pages that already looked fine inline.
+    attr_accessor :action_items_dropdown_threshold
+
     # Milliseconds equivalent of #flash_auto_dismiss_seconds, or nil when
     # #flash_auto_dismiss is off — the exact number both flash-rendering
     # paths this gem ships (lib/active_admin/views/flash_messages.rb's
@@ -223,6 +242,8 @@ module ActiveAdminPrism
       @select2 = false
       @active_filters_bar = true
       @sidebar_collapsible = true
+      @action_items_dropdown = true
+      @action_items_dropdown_threshold = 3
     end
   end
 

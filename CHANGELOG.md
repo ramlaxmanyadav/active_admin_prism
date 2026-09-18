@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.4
+
+- Every sidebar section now collapses to a single icon button when
+  `collapsible_filters` is on — not just the "Filters" panel, which is
+  all this used to do. A host's own custom `sidebar "Title" do ... end`
+  block (or ActiveAdmin core's own "Search status" panel, when
+  `active_filters_bar` is turned off) used to keep rendering at its full
+  width/height even while `#sidebar` itself squeezed down to a 72px icon
+  gutter — wrapping every word onto its own line, or spilling out
+  unclipped over the main content, instead of collapsing cleanly
+  alongside Filters. Pass `icon:` to the `sidebar` DSL
+  (`sidebar "More Actions", icon: :list do ... end`) to pick from any icon
+  in `lib/prism_icons.rb`; anything else falls back to a generic one.
+  `#sidebar` itself now only squeezes while *every* section agrees to
+  stay collapsed, reflowing back to full width the moment any one of them
+  opens.
+- A title bar with more than `action_items_dropdown_threshold` (default:
+  3) `action_item` buttons now collapses all of them into a single
+  "Actions" dropdown instead of rendering a multi-row wall of individual
+  buttons — a resource registering a dozen+ CSV upload / bulk-action
+  links is a real example this was built for. Purely client-side: it
+  moves each existing action_item element as-is into the dropdown, so
+  whatever a host's own `action_item` block rendered — a plain link, a
+  `button_to` form, anything — keeps working unmodified inside it. Set
+  `config.action_items_dropdown = false` to always render every
+  action_item inline, matching this gem's behavior before this flag
+  existed.
+
 ## 0.1.3
 
 - A hamburger icon button next to the brand, at the top of the Prism

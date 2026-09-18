@@ -43,6 +43,122 @@ form input[type="submit"].danger {
   margin: 0;
 }
 
+// Consolidated "Actions" dropdown (ActiveAdminPrism::Configuration
+// #action_items_dropdown/#action_items_dropdown_threshold) — see
+// js-src/prism.js, which moves the real action_item elements into
+// .prism-action-items-menu wholesale rather than rebuilding them, so the
+// button-primary rule above still applies to their own <a>/<button>
+// unless overridden below for the in-menu context specifically.
+.prism-action-items-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.prism-action-items-toggle {
+  @include prism-button-primary;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+
+  &::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    margin-left: 2px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+  }
+}
+
+.prism-action-items-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  min-width: 240px;
+  max-width: 360px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: $prism-bg-card;
+  border: 1px solid $prism-border-color;
+  border-radius: $prism-radius-sm;
+  box-shadow: $prism-shadow-popover;
+
+  li {
+    margin: 2px 0;
+  }
+
+  .action_item form button,
+  .action_item form input[type="submit"] {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    border: none !important;
+    border-radius: $prism-radius-sm !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: $prism-text-body !important;
+    font-weight: 600 !important;
+    font-size: 0.88em !important;
+    text-align: left !important;
+    text-decoration: none !important;
+    white-space: normal !important;
+    cursor: pointer;
+
+    &:hover {
+      background: $prism-bg-page !important;
+      color: $prism-text-heading !important;
+    }
+  }
+}
+
+// Resets the big pill-button look a plain `link_to` action_item gets
+// outside the dropdown (the "#title_bar .action_items span.action_item >
+// a" rule near the top of this file) — matching its exact selector shape
+// (id + span.action_item, not just ".action_item") is what lets this win
+// the accompanying !important fight: with both sides !important, the
+// higher-specificity/ID-bearing selector still wins regardless of source
+// order, so a same-shaped selector nested one level deeper (inside
+// "#title_bar", which the dropdown itself always renders within) is
+// needed rather than a flatter ".prism-action-items-menu .action_item > a".
+#title_bar .prism-action-items-menu span.action_item > a {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 8px 12px !important;
+  border: none !important;
+  border-radius: $prism-radius-sm !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: $prism-text-body !important;
+  font-weight: 600 !important;
+  font-size: 0.88em !important;
+  text-align: left !important;
+  text-decoration: none !important;
+  white-space: normal !important;
+  cursor: pointer;
+
+  &:hover {
+    background: $prism-bg-page !important;
+    color: $prism-text-heading !important;
+  }
+}
+
+.prism-action-items-dropdown.open .prism-action-items-menu {
+  display: block;
+}
+
 // Secondary / lower-emphasis buttons: batch actions trigger, pagination,
 // "clear filters", "cancel" form link.
 .dropdown_menu .dropdown_menu_button,

@@ -3,22 +3,36 @@
 module ActiveAdmin
   module Views
     # Reopens ActiveAdmin::Views::SidebarSection (used for every sidebar
-    # section, e.g. "Filters", "Search Status", any custom
-    # `sidebar :title do ... end` block) to inject a real inline SVG icon
-    # into the title of the *Filters* section specifically — matching the
-    # id ActiveAdmin::SidebarSection#id computes for it
-    # ("filters_sidebar_section"). Every other sidebar section is untouched.
+    # section — "Filters", "Search Status", and any custom
+    # `sidebar "Title" do ... end` block a host app registers) to collapse
+    # *every* section to a single icon button by default, expanding to the
+    # full panel on click — not just the Filters section, which is all this
+    # used to do.
     #
-    # The label text is wrapped in its own span so CSS can visually hide it
-    # while collapsed without touching the icon (see
-    # scss-src/_panels.scss's #filters_sidebar_section rules, and
-    # prism.js's filters-collapse handler for the actual toggle).
+    # Why generalize this: the #sidebar column's own width only shrinks to
+    # a 72px icon gutter while every one of its sections is collapsed (see
+    # scss-src/_panels.scss's ":has(.prism-collapsible-panel):not(:has(...open))"
+    # rule) — a section left OUT of that treatment still renders at its
+    # normal full width/height inside that shrunk 72px column, wrapping
+    # every word onto its own line (or, depending on its own CSS, spilling
+    # out unclipped over the main content) instead of collapsing cleanly
+    # alongside Filters. A host's own custom sidebar block (e.g. a "More
+    # Actions" link list) hit exactly this before this file generalized
+    # the treatment to cover it too.
+    #
+    # A host can pass its own icon via `sidebar "Title", icon: :list do
+    # ... end` (any name from lib/prism_icons.rb) — anything else, plus
+    # every section that predates this option, falls back to a generic
+    # icon (:filter for the Filters section specifically, matching its
+    # pre-existing look; :list for everything else).
     #
     # This only runs when ActiveAdminPrism.configuration.collapsible_filters
-    # is true — when it's false the section is left exactly as ActiveAdmin
-    # renders it by default (plain text title, no icon).
+    # is true — when it's false, every section is left exactly as
+    # ActiveAdmin renders it by default (plain text title, no icon, never
+    # collapsed).
     class SidebarSection < Panel
       FILTERS_SECTION_ID = "filters_sidebar_section"
+      DEFAULT_ICON = :list
 
       def build(section)
         @section = section
@@ -26,7 +40,7 @@ module ActiveAdmin
         add_class @section.custom_class if @section.custom_class
         self.id = @section.id
 
-        if @section.id == FILTERS_SECTION_ID && ActiveAdminPrism.configuration.collapsible_filters
+        if ActiveAdminPrism.configuration.collapsible_filters
           add_class "prism-collapsible-panel"
 
           # Panel#build already appended the plain-text @title (h3) as the
@@ -48,7 +62,7 @@ module ActiveAdmin
           # be explicitly deleted from wherever it landed before unshifting
           # it to the front — otherwise it ends up in `children` twice.
           children.delete(@title)
-          icon = ActiveAdminPrism::Icons.svg(:filter, css_class: "prism-filter-icon")
+          icon = ActiveAdminPrism::Icons.svg(icon_name, css_class: "prism-filter-icon")
           contents = @contents
           @contents = nil
           new_title = h3 do
@@ -63,6 +77,21 @@ module ActiveAdmin
         end
 
         build_sidebar_content
+      end
+
+      private
+
+      # `options[:icon]` is a new convention this gem adds to the stock
+      # `sidebar "Title", only: [...] do ... end` DSL — ActiveAdmin::
+      # SidebarSection itself just stores the whole options hash
+      # untouched, so a host can already pass `icon:` today without any
+      # of their own version needing to change; it's a no-op until this
+      # gem starts reading it here.
+      def icon_name
+        return @section.options[:icon] if @section.options[:icon]
+        return :filter if @section.id == FILTERS_SECTION_ID
+
+        DEFAULT_ICON
       end
     end
   end

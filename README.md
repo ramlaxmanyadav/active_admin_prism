@@ -120,6 +120,8 @@ ActiveAdminPrism.configure do |config|
   config.menu_search = true             # search box that filters the sidebar's Pages nav
   config.select2 = false                # default: false — auto-enhance every <select> into Select2
   config.sidebar_collapsible = true     # sidebar collapses to an icon-only rail (desktop only)
+  config.action_items_dropdown = true   # many title-bar action_items collapse into an "Actions" dropdown
+  config.action_items_dropdown_threshold = 3
 end
 
 ActiveAdminPrism.enable!

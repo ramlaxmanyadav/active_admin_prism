@@ -53,12 +53,12 @@
 }
 
 // Reflow #main_content (the table/grid) and #sidebar's own width to match
-// whether the collapsible Filters panel is expanded or not — driven by a
-// "prism-filters-open" class prism.js toggles on <body> in lockstep with
-// #filters_sidebar_section's own ".open" (a body class is necessary since
-// #main_content is a *sibling* of #sidebar, not a descendant — CSS can't
-// reach across siblings any other way). Both of ActiveAdmin's own rules
-// here are triple-ID-scoped / double-ID-scoped
+// whether ANY collapsible sidebar section is currently expanded —
+// ":has(.prism-collapsible-panel.open)" is what actually drives this
+// (every section collapsed = squeeze to the icon gutter; any one of them
+// open = back to full width), so #sidebar only needs to squeeze while
+// every one of its sections agrees to collapse. Both of ActiveAdmin's own
+// rules here are triple-ID-scoped / double-ID-scoped
 // (structure/_main_structure.scss), so matching that path (rather than a
 // flatter selector) is what lets this reliably win regardless of load order.
 $prism-filters-collapsed-gutter: 72px !default;
@@ -69,7 +69,7 @@ $prism-filters-collapsed-gutter: 72px !default;
     width 280ms cubic-bezier(0.4, 0, 0.2, 1), margin-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-body:has(.prism-collapsible-panel):not(.prism-filters-open) {
+body:has(.prism-collapsible-panel):not(:has(.prism-collapsible-panel.open)) {
   #active_admin_content:not(.without_sidebar) #main_content_wrapper #main_content {
     margin-right: $prism-filters-collapsed-gutter;
   }
@@ -80,14 +80,17 @@ body:has(.prism-collapsible-panel):not(.prism-filters-open) {
   }
 }
 
-// "Filters" sidebar panel — collapses to a single icon button by default
+// Every sidebar section — collapses to a single icon button by default
 // (ActiveAdminPrism::Configuration#collapsible_filters), expanding to
-// the full form on click (see prism.js's filters-collapse handler, and
-// lib/active_admin/views/filters_sidebar.rb for the icon + label-span
-// markup this targets). AA gives this specific SidebarSection a stable id
-// ("#{name}_sidebar_section" => "filters_sidebar_section"), so this is
-// scoped to it alone — any other panel (dashboard panels, custom sidebar
-// sections a host adds) is untouched.
+// its full content on click (see prism.js's collapsible-panel handler,
+// and lib/active_admin/views/filters_sidebar.rb for the icon + label-span
+// markup this targets, and for how a section picks its own icon). Used to
+// be scoped to the "Filters" section alone (AA gives it a stable id,
+// "filters_sidebar_section") — generalized to every section, including a
+// host's own custom `sidebar "Title" do ... end` block, since one left
+// out of this treatment still rendered at its full width/height inside
+// the #sidebar column's own squeeze above instead of collapsing alongside
+// it, wrapping or overflowing instead.
 .prism-collapsible-panel {
   // Collapsed (default): no floating white card — just the icon button —
   // so it doesn't read as a stray tiny panel. Restored in full under
