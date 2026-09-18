@@ -121,6 +121,24 @@
       event.preventDefault();
       setCollapsed(toggle, !document.body.classList.contains("prism-sidebar-collapsed"));
     });
+
+    // Clicking into the nav while collapsed to the icon-only rail expands
+    // it back out — the collapsed rail exists to save width while
+    // *browsing* the current page, not as a standing preference that
+    // should keep the destination page's own labels (or, for a parent
+    // item, its whole submenu) hidden too. Covers both a leaf link (real
+    // `<a href>`, about to navigate away) and a parent's own
+    // ".prism-nav-group-toggle" — that one never navigates, but while
+    // collapsed its submenu is force-hidden regardless of the "open"
+    // class the sidebar's own separate click handler still toggles on it
+    // (scss-src/_sidebar.scss's ".prism-nav-submenu { display: none
+    // !important; }" under body.prism-sidebar-collapsed), so without
+    // this, clicking a parent like "School" silently did nothing visible.
+    document.addEventListener("click", function (event) {
+      if (!document.body.classList.contains("prism-sidebar-collapsed")) return;
+      if (!event.target.closest("a.prism-nav-link, .prism-nav-group-toggle")) return;
+      setCollapsed(toggle, false);
+    });
   });
 })();
 
@@ -352,22 +370,63 @@
   });
 })();
 
+// Shared by the "consolidated sidebar panels" (below) and "consolidated
+// action items" (further down) features — both are independent top-level
+// IIFEs, so this is their one shared meeting point rather than a closure:
+// each wants its own Select2 "jump menu" sitting in the *same* row, in
+// the title bar, rather than the sidebar one living separately down in
+// #sidebar. Whichever feature's DOMContentLoaded handler runs first
+// creates the row; the other just finds and reuses it. Declared with
+// `function` (not `const`/an IIFE-local var) so it's hoisted and visible
+// to every IIFE below it in this same file regardless of registration
+// order.
+function prismTitlebarActionsRow() {
+  var right = document.getElementById("titlebar_right");
+  if (!right) return null;
+
+  var row = document.getElementById("prism-titlebar-actions-row");
+  if (row) return row;
+
+  var actionItems = right.querySelector(":scope > .action_items") || right;
+
+  row = document.createElement("span");
+  row.id = "prism-titlebar-actions-row";
+  row.className = "prism-titlebar-actions-row";
+  actionItems.appendChild(row);
+
+  // ActiveAdmin's own auto-added "New <Resource>" button (marked
+  // ".prism-action-item-new" — see lib/active_admin/views/action_items.rb)
+  // is excluded from consolidation below (it's the single most-used
+  // action on an index page, unlike the bulk-action/CSV-upload links this
+  // feature actually exists to tidy away) — re-appended here, after the
+  // row, so it keeps its traditional spot at the very top-right corner
+  // (text-align:right on #titlebar_right means the *last* child sits at
+  // the true right edge) with the consolidated dropdown(s) landing just
+  // to its left instead of displacing it. Harmless no-op if there's no
+  // such button on this page (a custom `register_page`, say).
+  var newItem = actionItems.querySelector(":scope > .action_item.prism-action-item-new");
+  if (newItem) actionItems.appendChild(newItem);
+
+  return row;
+}
+
 // Collapsible sidebar sections: collapse to a single icon button by
 // default, expanding to the full panel on click. See
 // scss-src/_panels.scss (.prism-collapsible-panel) for the actual
 // collapse/expand styling — this only toggles a section's own ".open"
-// class an inline click responds to. Applies to every section, not just
-// Filters — see lib/active_admin/views/filters_sidebar.rb, which
-// generalized this from a Filters-only treatment to cover any sidebar
-// section, including a host's own custom `sidebar "Title" do ... end`
-// block. Skipped entirely when
+// class an inline click responds to. Applies to Filters this way exactly
+// as it always has; any *other* collapsible section (a host's own
+// `sidebar "Title" do ... end` block) never actually opens in place at
+// all — buildOtherSectionsDropdown below immediately flattens its
+// links into the "Sidebar Actions" dropdown and discards the rest of the
+// section outright, so the wireUp() call each one still gets here (for
+// consistency/simplicity, not because it matters) attaches to an element
+// that's about to be removed. Skipped entirely when
 // ActiveAdminPrism.configuration.collapsible_filters is false (the
 // "prism-filters-collapsible-disabled" body class, set in
 // lib/active_admin/views/flash_messages.rb#body_classes).
 (function () {
   "use strict";
-
-  var onOpenChange = null;
 
   function setOpen(section, toggle, open) {
     section.classList.toggle("open", open);
@@ -383,7 +442,6 @@
     if (section.id === "filters_sidebar_section") {
       document.body.classList.toggle("prism-filters-open", open);
     }
-    if (onOpenChange) onOpenChange();
   }
 
   function wireUp(section) {
@@ -408,89 +466,108 @@
 
   // Every OTHER collapsible section — anything besides Filters, e.g. a
   // host's own custom `sidebar "..." do ... end` block — gets consolidated
-  // into a single "More Actions"-labeled Select2 dropdown instead of each
-  // rendering its own individually collapsed icon button; picking one
-  // opens it and closes every other non-Filters section (a section's own
-  // header still opens/closes it directly too, syncing the dropdown's
-  // value either way). Filters is deliberately excluded from this and
-  // always keeps its own plain icon button exactly as before, whether or
-  // not any other sections exist — see ActiveAdminPrism::Configuration
-  // #collapsible_filters.
-  function buildOtherSectionsDropdown(sidebar, entries) {
+  // into a single "Sidebar Actions" Select2 dropdown instead of each
+  // rendering its own individually collapsed icon button; every
+  // link/button inside is flattened into that dropdown as its own option
+  // (see buildOtherSectionsDropdown below), and the section itself is
+  // discarded outright rather than ever opening in place. Filters is
+  // deliberately excluded from this and always keeps its own plain icon
+  // button exactly as before, whether or not any other sections exist —
+  // see ActiveAdminPrism::Configuration#collapsible_filters.
+  //
+  // Rendered in the title bar (prismTitlebarActionsRow, shared with the
+  // consolidated action_items dropdown below) rather than inside #sidebar
+  // itself — sitting next to that dropdown, styled the same way, reads as
+  // one coherent "more stuff lives here" row rather than two separate,
+  // disconnected mechanisms in different parts of the page.
+  //
+  // Deliberately flattened to match that other dropdown's own click-and-
+  // reset "jump menu" flow instead of a nested reveal-a-panel-then-pick-
+  // a-link one: every actual link/button/submit inside every non-Filters
+  // section's content becomes its own flat option here (a section that
+  // groups a few related links, the common case, disappears entirely as
+  // a grouping level) — moved into a hidden holding area, same technique
+  // and same reason as .prism-action-items-holding below (an element
+  // fully removed from the document can't bubble a click up to where
+  // Rails UJS's own document-level listener is, breaking any
+  // data-method/data-confirm link; staying attached-but-hidden avoids
+  // that). Each non-Filters section itself (now an empty shell once its
+  // content's been moved out) is discarded outright either way, so
+  // #sidebar never has to make room for anything beyond Filters alone.
+  function buildOtherSectionsDropdown(entries) {
     if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
 
-    sidebar.classList.add("prism-sidebar-multi-panel");
+    var row = prismTitlebarActionsRow();
+    if (!row) return;
 
-    var wrapper = document.createElement("div");
+    var holding = document.createElement("div");
+    holding.className = "prism-sidebar-panel-holding";
+    holding.hidden = true;
+
+    var labels = [];
+    entries.forEach(function (entry) {
+      var contents = entry.section.querySelector(":scope > .panel_contents");
+      if (contents) {
+        Array.prototype.forEach.call(contents.querySelectorAll("a, button, input[type=submit]"), function (trigger) {
+          trigger.dataset.prismSidebarActionsIndex = String(labels.length);
+          labels.push((trigger.value || trigger.textContent || "").trim());
+        });
+        holding.appendChild(contents);
+      }
+      entry.section.remove();
+    });
+
+    if (!labels.length) return;
+
+    var wrapper = document.createElement("span");
     wrapper.className = "prism-sidebar-panel-select-wrapper";
-
-    var label = document.createElement("span");
-    label.className = "prism-sidebar-panel-select-label";
-    label.textContent = "More Actions";
-    label.id = "prism-sidebar-panel-select-label";
 
     var select = document.createElement("select");
     select.className = "prism-sidebar-panel-select";
-    select.setAttribute("aria-labelledby", label.id);
-    // A real leading <option value=""> is what lets Select2 show a
-    // placeholder on a *single* select, and (with allowClear) is what
-    // "x" resets to — closing every section, back to a fully collapsed
-    // gutter with nothing open.
+    // A real leading <option value=""> (kept selected, non-removable) is
+    // what lets Select2 show a placeholder on a *single* select at all.
     select.appendChild(document.createElement("option"));
 
-    var openIndex = -1;
-    entries.forEach(function (entry, index) {
+    labels.forEach(function (label, index) {
       var option = document.createElement("option");
       option.value = String(index);
-      option.textContent = entry.section.getAttribute("data-prism-panel-title") || "Panel " + (index + 1);
+      option.textContent = label;
       select.appendChild(option);
-      if (entry.section.classList.contains("open")) openIndex = index;
     });
 
-    wrapper.appendChild(label);
     wrapper.appendChild(select);
-    // Placed right where the first non-Filters section would otherwise
-    // have rendered its own icon button — not forced to the very top of
-    // #sidebar, which would visually queue it ahead of Filters.
-    sidebar.insertBefore(wrapper, entries[0].section);
+    wrapper.appendChild(holding);
+    // Appended, not inserted first — whichever of this feature or the
+    // action_items one below runs first (DOMContentLoaded handlers fire
+    // in registration order, and this file registers this one first)
+    // claims the left slot in the row; the other lands to its right.
+    row.appendChild(wrapper);
 
     var $select = jQuery(select).select2({
-      width: "100%",
-      placeholder: "Select an action",
-      allowClear: true,
-      minimumResultsForSearch: 6
+      width: "220px",
+      placeholder: "Sidebar Actions (" + labels.length + ")",
+      // 0, not some higher threshold: always show the search box, even
+      // with only a couple of options — that's the one visual cue that
+      // reads unambiguously as "this is Select2, not a plain dropdown"
+      // regardless of how many links a host's sidebar block happens to
+      // have right now, and it's what keeps this usable once it does
+      // grow rather than needing to cross a threshold first.
+      minimumResultsForSearch: 0
     });
-
-    if (openIndex >= 0) $select.val(String(openIndex)).trigger("change");
 
     $select.on("select2:select", function (event) {
-      var index = parseInt(event.params.data.id, 10);
-      entries.forEach(function (entry, i) {
-        setOpen(entry.section, entry.toggle, i === index);
-      });
+      var index = event.params.data.id;
+      var trigger = holding.querySelector('[data-prism-sidebar-actions-index="' + index + '"]');
+      if (trigger) trigger.click();
+      // Resets to the placeholder right away, same as the action_items
+      // dropdown — this fires an action, it isn't a persistent selection.
+      $select.val("").trigger("change");
     });
-
-    $select.on("select2:clear", function () {
-      entries.forEach(function (entry) {
-        setOpen(entry.section, entry.toggle, false);
-      });
-    });
-
-    // Keeps the dropdown in sync when a section is opened/closed some
-    // other way (its own header) instead of through this dropdown.
-    onOpenChange = function () {
-      var current = entries.filter(function (entry) {
-        return entry.section.classList.contains("open");
-      })[0];
-      var index = current ? String(entries.indexOf(current)) : "";
-      if ($select.val() !== index) $select.val(index).trigger("change");
-    };
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     if (document.body.classList.contains("prism-filters-collapsible-disabled")) return;
 
-    var sidebar = document.getElementById("sidebar");
     var filtersSection = document.getElementById("filters_sidebar_section");
     var filtersToggle = null;
     var otherEntries = [];
@@ -504,8 +581,6 @@
         return;
       }
 
-      var titleEl = toggle.querySelector(".prism-filter-label");
-      section.setAttribute("data-prism-panel-title", titleEl ? titleEl.textContent : section.id);
       otherEntries.push({ section: section, toggle: toggle });
     });
 
@@ -513,30 +588,30 @@
       document.body.classList.toggle("prism-filters-open", filtersSection.classList.contains("open"));
     }
 
-    if (sidebar && otherEntries.length > 0) buildOtherSectionsDropdown(sidebar, otherEntries);
+    if (otherEntries.length > 0) buildOtherSectionsDropdown(otherEntries);
 
     // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
     // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
-    // straight to the Filters form itself — clicking anywhere on it always
-    // *opens* the panel (never toggles it closed; that's still the
-    // funnel icon's job) and scrolls it into view, since #sidebar isn't
-    // sticky the way the left nav is and can scroll out of view on a
-    // long table.
+    // straight to the Filters form itself — clicking anywhere on it toggles
+    // the panel open/closed, same as the funnel icon, and scrolls it into
+    // view on open, since #sidebar isn't sticky the way the left nav is and
+    // can scroll out of view on a long table.
     var activeFiltersBar = document.getElementById("prism_active_filters_bar");
     if (activeFiltersBar && filtersSection && filtersToggle) {
       activeFiltersBar.setAttribute("role", "button");
       activeFiltersBar.setAttribute("tabindex", "0");
-      activeFiltersBar.setAttribute("aria-label", "Show filters");
+      activeFiltersBar.setAttribute("aria-label", "Toggle filters");
 
-      var openFromBar = function (event) {
+      var toggleFromBar = function (event) {
         if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
         if (event.type === "keydown") event.preventDefault();
-        setOpen(filtersSection, filtersToggle, true);
-        filtersSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        var open = !filtersSection.classList.contains("open");
+        setOpen(filtersSection, filtersToggle, open);
+        if (open) filtersSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
       };
 
-      activeFiltersBar.addEventListener("click", openFromBar);
-      activeFiltersBar.addEventListener("keydown", openFromBar);
+      activeFiltersBar.addEventListener("click", toggleFromBar);
+      activeFiltersBar.addEventListener("keydown", toggleFromBar);
     }
   });
 })();
@@ -648,12 +723,27 @@
     if (!right || !right.dataset.prismActionItemsThreshold) return;
     if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
 
+    // Not "!threshold" — 0 is this option's own default (see
+    // ActiveAdminPrism::Configuration#action_items_dropdown_threshold)
+    // and would be wrongly treated as falsy/absent otherwise.
     var threshold = parseInt(right.dataset.prismActionItemsThreshold, 10);
     var container = right.querySelector(":scope > .action_items");
-    if (!threshold || !container) return;
+    if (isNaN(threshold) || !container) return;
 
-    var items = Array.prototype.slice.call(container.querySelectorAll(":scope > .action_item"));
+    // ":not(.prism-action-item-new)" — the "New <Resource>" button (see
+    // lib/active_admin/views/action_items.rb for where that class comes
+    // from) is excluded from consolidation and left inline in its
+    // original spot: it's the single most-used action on an index page,
+    // unlike the bulk-action/CSV-upload links this feature actually
+    // exists to tidy away, so sweeping it into a dropdown too would bury
+    // the one button visitors reach for constantly.
+    var items = Array.prototype.slice.call(
+      container.querySelectorAll(":scope > .action_item:not(.prism-action-item-new)")
+    );
     if (items.length <= threshold) return;
+
+    var row = prismTitlebarActionsRow();
+    if (!row) return;
 
     var wrapper = document.createElement("span");
     wrapper.className = "prism-action-items-dropdown";
@@ -684,12 +774,20 @@
 
     wrapper.appendChild(select);
     wrapper.appendChild(holding);
-    container.appendChild(wrapper);
+    // Appended, not inserted first — this feature's DOMContentLoaded
+    // handler is registered after the "consolidated sidebar panels" one
+    // (prismTitlebarActionsRow's other caller), so its own "Sidebar Actions"
+    // dropdown (if any) has already claimed the left slot in the shared
+    // row by the time this runs; this one lands to its right.
+    row.appendChild(wrapper);
 
     var $select = jQuery(select).select2({
       width: "220px",
       placeholder: "Actions (" + items.length + ")",
-      minimumResultsForSearch: 6
+      // See the matching comment in buildOtherSectionsDropdown above —
+      // always-visible search box, not gated behind a result-count
+      // threshold, is what makes this read as Select2 from the first item.
+      minimumResultsForSearch: 0
     });
 
     $select.on("select2:select", function (event) {
@@ -703,31 +801,43 @@
       // stay "set" to.
       $select.val("").trigger("change");
     });
+  });
+})();
 
-    // Aligns the dropdown's right edge with the index table's own right
-    // edge instead of #title_bar's (a table's columns don't necessarily
-    // stretch to fill the full content width, so those two edges often
-    // don't line up — and #title_bar itself spans wider than the table's
-    // own container to begin with, since it sits above the #main_content/
-    // #sidebar split rather than inside it). `transform: translateX`
-    // shifts it left from wherever it already renders in normal flow —
-    // deliberately not `position: absolute/fixed`, which would need a
-    // containing block that actually shares the table's right edge, and
-    // none of this element's ancestors do. Staying in normal flow (just
-    // visually shifted) is also what keeps it aligned with the top of
-    // #title_bar for free, reading as a top-level menu rather than
-    // something floating at an offset.
+// Aligns the shared title bar "jump menu" row (prismTitlebarActionsRow,
+// above — the consolidated action_items dropdown and/or the consolidated
+// "Sidebar Actions" sidebar-panels dropdown, whichever of those exist) with
+// the index table's own right edge instead of #title_bar's: a table's
+// columns don't necessarily stretch to fill the full content width, so
+// those two edges often don't line up, and #title_bar itself spans wider
+// than the table's own container to begin with (it sits above the
+// #main_content/#sidebar split, not inside it). A separate, later IIFE
+// rather than living inside either dropdown's own setup — either one, or
+// both, might be the reason the row exists, and this only needs to run
+// once regardless of which.
+(function () {
+  "use strict";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    var row = document.getElementById("prism-titlebar-actions-row");
     var table = document.querySelector("#main_content table");
+    if (!row || !table) return;
 
+    // `transform: translateX` shifts the row left from wherever it
+    // already renders in normal flow — deliberately not `position:
+    // absolute/fixed`, which would need a containing block that actually
+    // shares the table's right edge, and none of this element's ancestors
+    // do. Staying in normal flow (just visually shifted) is also what
+    // keeps it aligned with the top of #title_bar for free, reading as a
+    // top-level menu rather than something floating at an offset.
     function alignToTable() {
-      if (!table) return;
-      wrapper.style.transform = "none";
-      var wrapperRect = wrapper.getBoundingClientRect();
+      row.style.transform = "none";
+      var rowRect = row.getBoundingClientRect();
       var tableRect = table.getBoundingClientRect();
-      if (!tableRect.width || !wrapperRect.width) return;
+      if (!tableRect.width || !rowRect.width) return;
 
-      var shift = wrapperRect.right - tableRect.right;
-      wrapper.style.transform = shift > 0 ? "translateX(-" + shift + "px)" : "none";
+      var shift = rowRect.right - tableRect.right;
+      row.style.transform = shift > 0 ? "translateX(-" + shift + "px)" : "none";
     }
 
     // Run once immediately, but layout isn't necessarily final yet at

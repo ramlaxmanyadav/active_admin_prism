@@ -221,7 +221,7 @@ module ActiveAdmin
         # #sidebar_collapsible has shrunk the sidebar to its icon-only rail
         # and .prism-nav-label itself is hidden (see scss-src/_sidebar.scss).
         span(class: "prism-nav-group-toggle", data: { "prism-toggle": true }, title: label) do
-          text_node icon_for(item)
+          text_node icon_for(item, label)
           span(label, class: "prism-nav-label")
           text_node chevron_svg
         end
@@ -242,13 +242,14 @@ module ActiveAdmin
       end
 
       def link_body(item, label)
-        helpers.safe_join([icon_for(item), helpers.content_tag(:span, label, class: "prism-nav-label")])
+        helpers.safe_join([icon_for(item, label), helpers.content_tag(:span, label, class: "prism-nav-label")])
       end
 
       # Always returns an html_safe string (possibly empty) — never escape-able
       # raw markup should cross a text_node/content_tag boundary unmarked.
-      def icon_for(item)
+      def icon_for(item, label)
         name = item.html_options[:icon] || DEFAULT_ITEM_ICONS[item.id]
+        name ||= ActiveAdminPrism::Icons.auto_nav_icon_name(label) if ActiveAdminPrism.configuration.auto_nav_icons
         return "".html_safe unless name
 
         (ActiveAdminPrism::Icons.svg(name, css_class: "prism-nav-icon") || "").html_safe

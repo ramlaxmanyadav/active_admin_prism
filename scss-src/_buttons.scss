@@ -43,6 +43,31 @@ form input[type="submit"].danger {
   margin: 0;
 }
 
+// #prism-titlebar-actions-row (below) and this button are appended as
+// plain DOM siblings inside .action_items via prismTitlebarActionsRow() in
+// js-src/prism.js, with no whitespace text node between them — inline-flex
+// elements packed that way sit flush with zero gap, so `gap` on the row
+// itself (which only spaces *its own* children) can't create the visual
+// separation on its own. Margin goes on this span itself, not its inner
+// `<a>`, since the rule just above pins that `<a>`'s own margin to 0.
+#title_bar .action_items span.action_item.prism-action-item-new {
+  margin-left: 10px;
+}
+
+// Shared row for this theme's own title-bar "jump menu" dropdowns —
+// js-src/prism.js's prismTitlebarActionsRow() creates this once and both
+// the consolidated action_items dropdown and the consolidated "More
+// Actions" sidebar-panels dropdown (below) append themselves into it, so
+// they render side by side rather than as two disconnected mechanisms in
+// different parts of the page. The row as a whole (not each dropdown
+// individually) is what a later IIFE aligns to the index table's right
+// edge — see that file for why.
+.prism-titlebar-actions-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 // Consolidated "Actions" jump menu (ActiveAdminPrism::Configuration
 // #action_items_dropdown/#action_items_dropdown_threshold) — see
 // js-src/prism.js, which builds a real Select2-enhanced <select> here and
@@ -61,6 +86,30 @@ form input[type="submit"].danger {
 }
 
 .prism-action-items-holding {
+  display: none;
+}
+
+// Consolidated "Sidebar Actions" jump menu (every collapsible sidebar
+// section besides Filters — see scss-src/_panels.scss and
+// lib/active_admin/views/filters_sidebar.rb). Every link/button inside
+// those sections' content is flattened into one option here, same
+// click-and-reset flow as .prism-action-items-dropdown above — the two
+// are styled identically (see scss-src/_select2.scss) since they're the
+// same kind of "jump menu", not a persistent value.
+.prism-sidebar-panel-select-wrapper {
+  display: inline-block;
+
+  .select2-container {
+    min-width: 220px;
+  }
+}
+
+// Same technique as .prism-action-items-holding above: the real
+// links/buttons stay attached to the document (just hidden), rather than
+// being fully removed, so Rails UJS's document-level click delegation
+// (data-method/data-confirm) still reaches them when the dropdown clicks
+// one on the option's behalf.
+.prism-sidebar-panel-holding {
   display: none;
 }
 

@@ -2,36 +2,70 @@
 
 ## 0.1.4
 
+- A Pages nav item registered with no `icon:` now gets one automatically
+  (`auto_nav_icons`, on by default) — picked deterministically from a
+  generic subset of the built-in icon set based on the item's own label,
+  so the same label always gets the same icon rather than shuffling
+  between page loads. Mainly matters once the sidebar is collapsed to
+  its icon-only rail (`sidebar_collapsible`): an unassigned item used to
+  render there as just a bare, indistinguishable dot. `icon:` set
+  explicitly always wins; `auto_nav_icons = false` restores the old
+  no-icon-at-all behavior.
 - Every non-Filters sidebar section (ActiveAdmin core's own "Search
   status" panel, when `active_filters_bar` is off, or a host's own custom
-  `sidebar "Title" do ... end` block) now collapses into a single, labeled
-  "More Actions" Select2 dropdown when `collapsible_filters` is on,
-  instead of each rendering its own individually collapsed icon button
-  with nowhere near enough room in the 72px gutter that assumed just one —
-  wrapping every word onto its own line, or spilling out unclipped over
-  the main content, instead of collapsing cleanly. Picking an option
-  opens that section (closing every other one) and reflows the table the
-  same as before; a section's own header still opens/closes it directly
-  too, keeping the dropdown in sync either way. The Filters panel itself
-  is untouched by any of this — it always keeps its own plain icon button
-  exactly as before, whether or not any other sections exist. A page with
-  only Filters (the common case) shows no dropdown at all.
+  `sidebar "Title" do ... end` block) now flattens every link/button
+  inside it into a single "Sidebar Actions" Select2 dropdown when
+  `collapsible_filters` is on, instead of each rendering its own
+  individually collapsed icon button with nowhere near enough room in
+  the 72px gutter that assumed just one — wrapping every word onto its
+  own line, or spilling out unclipped over the main content, instead of
+  collapsing cleanly. This dropdown renders in the title bar, next to
+  (and styled identically to) the consolidated "Actions" dropdown below,
+  so the two read as one "more stuff lives here" row instead of two
+  disconnected mechanisms in different parts of the page. Picking an
+  option fires a real click on the underlying (hidden but still
+  DOM-attached, so Rails UJS's `data-method`/`data-confirm` keeps
+  working) link/button and resets right back to its placeholder — same
+  "jump menu" click-and-reset flow as the "Actions" dropdown, rather than
+  opening the section's content in a nested panel. The section itself is
+  discarded outright either way, never rendered in `#sidebar`. The
+  Filters panel itself is untouched by any of this — it always keeps its
+  own plain icon button exactly as before, whether or not any other
+  sections exist. A page with only Filters (the common case) shows no
+  dropdown at all.
 - A title bar with more than `action_items_dropdown_threshold` (default:
-  3) `action_item` buttons now collapses all of them into a single
-  Select2 "jump menu", aligned with the index table's own right edge
-  (not the page's corner, which a table's own column-driven width often
-  doesn't reach), instead of rendering a multi-row wall of individual
-  buttons — a resource registering a dozen+ CSV upload / bulk-action
-  links is a real example this was built for. Picking an option fires
-  that action immediately (a plain link navigates, a `button_to` form
-  submits — whatever it actually was, `data-confirm`/`data-method`
-  included) and resets right back to its placeholder. Purely client-side:
-  it moves each existing action_item element as-is into a hidden holding
-  area and `.click()`s the real trigger inside it, so whatever a host's
-  own `action_item` block rendered keeps working completely unmodified.
-  Set `config.action_items_dropdown = false` to always render every
+  `0`, so this applies from a single extra `action_item` on) `action_item`
+  buttons now collapses all of them into a single Select2 "jump menu",
+  aligned with the index table's own right edge (not the page's corner,
+  which a table's own column-driven width often doesn't reach), instead
+  of rendering a multi-row wall of individual buttons — a resource
+  registering a dozen+ CSV upload / bulk-action links is a real example
+  this was built for. Sits in the same row as the "Sidebar Actions"
+  dropdown above when both exist on the same page, with a visible gap
+  before the (always excluded, always pinned to the true top-right
+  corner) "New Resource" button. Both this and the "Sidebar Actions"
+  dropdown above always show Select2's search box, even with just one or
+  two options — not gated behind a result-count threshold — so either
+  reads unambiguously as Select2 regardless of how many items it
+  currently has. Picking an option fires that action immediately (a
+  plain link navigates, a `button_to` form submits — whatever it
+  actually was, `data-confirm`/`data-method` included) and resets right
+  back to its placeholder. Purely client-side: it moves each existing
+  action_item element as-is into a hidden holding area and `.click()`s
+  the real trigger inside it, so whatever a host's own `action_item`
+  block rendered keeps working completely unmodified. Set
+  `config.action_items_dropdown = false` to always render every
   action_item inline, matching this gem's behavior before this flag
   existed.
+- The active-filters bar (`config.active_filters_bar`) now toggles the
+  Filters panel open/closed on click, same as the funnel icon, instead of
+  only ever opening it.
+- Following any Pages nav item — a plain leaf link, or a parent group
+  like "School" — while the sidebar is collapsed to its icon-only rail
+  (`config.sidebar_collapsible`) now expands it back out first. A
+  parent's own submenu is force-hidden by CSS while collapsed regardless
+  of its "open" class, so without this, clicking one did nothing visible
+  at all.
 
 ## 0.1.3
 

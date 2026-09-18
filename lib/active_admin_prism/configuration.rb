@@ -195,12 +195,30 @@ module ActiveAdminPrism
     # matching this gem's behavior before this flag existed.
     attr_accessor :action_items_dropdown
 
-    # How many `action_item`s a title bar can have before
-    # #action_items_dropdown (if true) collapses all of them into a
-    # dropdown — a page with just a "New Resource" button (or that plus
-    # one custom action) is common enough that a low threshold would
-    # dropdown-ify pages that already looked fine inline.
+    # How many `action_item`s (not counting the auto-added "New Resource"
+    # button, which is never counted or consolidated — see
+    # lib/active_admin/views/action_items.rb) a title bar can have before
+    # #action_items_dropdown (if true) collapses them into a dropdown.
+    # Default 0 means the "Actions" Select2 dropdown is what a host sees
+    # by default the moment they add even a single custom action_item,
+    # rather than only once they've piled up "many" of them — raise this
+    # if you'd rather a page with just one or two extra actions kept
+    # rendering them inline instead.
     attr_accessor :action_items_dropdown_threshold
+
+    # Whether a Pages nav item with no explicit `icon:` (and not one of
+    # the handful this gem itself always icons — the current-user/logout
+    # rows) gets one anyway instead of rendering label-less, or as just a
+    # bare dot once the sidebar is collapsed to its icon-only rail (see
+    # ActiveAdminPrism::Configuration#sidebar_collapsible). Deterministic
+    # per item, not re-rolled on every request — the same menu label
+    # always picks the same icon from lib/prism_icons.rb's
+    # ActiveAdminPrism::Icons::NAV_ICON_POOL (see
+    # lib/active_admin/views/prism_sidebar.rb#icon_for), so it doesn't
+    # visibly shuffle around between page loads. false renders no icon at
+    # all for such an item, matching this gem's behavior before this flag
+    # existed.
+    attr_accessor :auto_nav_icons
 
     # Milliseconds equivalent of #flash_auto_dismiss_seconds, or nil when
     # #flash_auto_dismiss is off — the exact number both flash-rendering
@@ -243,7 +261,8 @@ module ActiveAdminPrism
       @active_filters_bar = true
       @sidebar_collapsible = true
       @action_items_dropdown = true
-      @action_items_dropdown_threshold = 3
+      @action_items_dropdown_threshold = 0
+      @auto_nav_icons = true
     end
   end
 

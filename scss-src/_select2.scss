@@ -259,8 +259,18 @@ form fieldset.inputs li.select > select:not(.select2-hidden-accessible) {
   }
 }
 
+// Padding on the *list* (not .select2-dropdown itself, which also
+// contains .select2-search--dropdown above with its own padding) is what
+// keeps a highlighted option's square corners from touching the
+// dropdown's own rounded ones — without it, a highlighted first/last
+// option reads as flush, square-edged chrome rather than an inset row.
+.select2-results__options {
+  padding: 4px;
+}
+
 .select2-results__option {
   padding: 8px 12px;
+  border-radius: $prism-radius-sm;
   color: $prism-text-body;
 
   &--highlighted {
@@ -272,6 +282,52 @@ form fieldset.inputs li.select > select:not(.select2-hidden-accessible) {
     background: $prism-bg-page;
     color: $prism-text-heading;
     font-weight: 600;
+  }
+}
+
+// Shared look for this theme's own "jump menu" Select2 widgets — the
+// consolidated action_items dropdown (lib/active_admin/views/title_bar.rb
+// / js-src/prism.js, ".prism-action-items-dropdown") and the consolidated
+// non-Filters sidebar section dropdown ("Sidebar Actions" —
+// ".prism-sidebar-panel-select-wrapper"). Both fire a click on a real,
+// hidden link/button and immediately reset rather than holding a
+// persistent value, so they're styled to read as a highlighted
+// button-like menu instead of a plain form field —
+// consistent with each other, which a plain select2 reskin alone doesn't
+// give them (its own text naturally comes out right-aligned here, not
+// centered: "#titlebar_right { text-align: right }" in ActiveAdmin core's
+// own _title_bar.scss is inherited all the way down to
+// .select2-selection__rendered's own text otherwise, and the sidebar
+// dropdown lives in the same inherited-alignment tree via #sidebar).
+.prism-action-items-dropdown,
+.prism-sidebar-panel-select-wrapper {
+  .select2-selection--single {
+    border-color: rgba($prism-color-primary, 0.4);
+    background: $prism-color-primary-light;
+  }
+
+  .select2-container--open .select2-selection--single,
+  .select2-container--focus .select2-selection--single {
+    border-color: $prism-color-primary;
+  }
+
+  // !important: the base ".select2-container .select2-selection--single
+  // .select2-selection__rendered" rule above this one is three classes
+  // deep (0,3,0) — more specific than this wrapper-scoped selector
+  // (0,2,0) alone, so color/font-weight here would otherwise lose
+  // regardless of source order.
+  .select2-selection__rendered {
+    text-align: center;
+    color: $prism-color-primary-dark !important;
+    font-weight: 700 !important;
+  }
+
+  .select2-selection__placeholder {
+    color: $prism-color-primary-dark !important;
+  }
+
+  .select2-selection__arrow b {
+    border-top-color: $prism-color-primary-dark !important;
   }
 }
 

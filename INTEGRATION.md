@@ -137,6 +137,7 @@ ActiveAdminPrism.configure do |config|
   config.sidebar_collapsible = true        # default: true
   config.action_items_dropdown = true      # default: true
   config.action_items_dropdown_threshold = 3  # default: 3
+  config.auto_nav_icons = true             # default: true
 end
 
 ActiveAdminPrism.enable!
@@ -165,6 +166,7 @@ ActiveAdminPrism.enable!
 | `sidebar_collapsible`             | `true`  | No hamburger toggle button renders next to the brand — the sidebar is always full width, with no way to collapse it to an icon-only rail. Desktop-only either way; the mobile off-canvas toggle is unaffected — see [Collapsible sidebar rail](#collapsible-sidebar-rail). |
 | `action_items_dropdown`          | `true`  | Every `action_item` always renders inline in the title bar, however many there are — no "Actions" dropdown consolidation. See [Consolidated action items](#consolidated-action-items). |
 | `action_items_dropdown_threshold` | `3`     | How many `action_item`s a title bar can have before `action_items_dropdown` (if on) collapses them into a dropdown. |
+| `auto_nav_icons`                 | `true`  | A Pages nav item with no explicit `icon:` renders with no icon at all (just its label, or a bare dot once collapsed to the icon-only rail) instead of an automatically-picked one — see [Automatic nav icons](#automatic-nav-icons). |
 
 **How this crosses the server/client boundary.** `sidebar`,
 `colorize_action_icons`, and the `login_*` flags are pure server-side
@@ -295,6 +297,21 @@ passes this hash through untouched) accepts: `:dashboard`, `:users`,
 `:cart`, `:box`, `:receipt`, `:credit_card`, `:message`, `:settings`,
 `:home`, `:list`, `:folder`, `:bell`, `:search`, `:menu`, `:logout`,
 `:check`, `:x`, `:chevron_down`, `:eye`, `:pencil`, `:trash`, `:filter`.
+
+### Automatic nav icons
+
+A menu item registered with no `icon:` at all still gets one, picked from
+a generic subset of the icon set above (`:dashboard`, `:users`, `:cart`,
+`:box`, `:receipt`, `:credit_card`, `:message`, `:settings`, `:home`,
+`:list`, `:folder`, `:bell`, `:search`, `:globe`, `:eye`, `:pencil`,
+`:filter`) based on the item's own label — the same label always maps to
+the same icon (it's a deterministic hash, not re-rolled per request), so
+it never visibly changes between page loads. This is mainly about the
+collapsed icon-only rail (see below): without any icon at all, an
+unassigned item renders there as just a bare dot, indistinguishable from
+any other unassigned item. `icon:` set explicitly always wins. Turn it
+off with `config.auto_nav_icons = false` to go back to rendering no icon
+for such an item (this gem's behavior before this flag existed).
 
 ### Collapsible sidebar rail
 
@@ -640,12 +657,17 @@ Every *other* sidebar section — dashboard panels, ActiveAdmin's own
 but consolidated into a single "More Actions" Select2 dropdown instead of
 each getting its own individually collapsed icon button: a stack of those
 has nowhere near enough room in the 72px gutter that assumes just one
-(Filters). Picking an option from it opens that section (closing every
-other non-Filters one — one visible at a time) and reflows the table just
-like Filters opening does. A section's own header still opens/closes it
-directly too, keeping the dropdown in sync either way. A page with no
-sections besides Filters (the common case) shows no dropdown at all —
-just the one familiar icon button.
+(Filters). This dropdown renders in the *title bar*, next to (and
+styled like) the consolidated action items dropdown below — see
+[Consolidated action items](#consolidated-action-items) — not inside
+`#sidebar` itself, so the two read as one "more stuff lives here" row
+instead of two disconnected mechanisms in different parts of the page.
+Picking an option from it opens that section (closing every other
+non-Filters one — one visible at a time, in `#sidebar`, same as ever)
+and reflows the table just like Filters opening does. A section's own
+header still opens/closes it directly too, keeping the dropdown in sync
+either way. A page with no sections besides Filters (the common case)
+shows no dropdown at all — just the one familiar icon button.
 
 Pass your own icon via `sidebar "More Actions", icon: :list do ... end`
 (any name from `lib/prism_icons.rb`) — it's only used on a section's own
@@ -1114,45 +1136,54 @@ With the config `false`, `body.prism-filters-collapsible-disabled` is the
 backstop class that forces every section back to always-expanded.
 
 With at least one collapsible section besides Filters, `prism.js` also
-inserts this — right before where the first non-Filters section's own
-markup above would otherwise sit, not at the very top of `#sidebar` (which
-would visually queue it ahead of Filters):
+adds `.prism-sidebar-multi-panel` to `#sidebar` — which does nothing but
+hide each non-Filters section's own collapsed-state `> h3` (above) via
+CSS
+(`#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open):not(#filters_sidebar_section) > h3`),
+since its trigger lives elsewhere now (Filters' own `> h3` is never
+hidden by this rule, regardless) — and inserts the actual dropdown into
+the *title bar's* shared row instead of into `#sidebar` itself:
 
 ```
-#sidebar.prism-sidebar-multi-panel
-  .prism-sidebar-panel-select-wrapper
-    span.prism-sidebar-panel-select-label   <- "More Actions"
-    select.prism-sidebar-panel-select       <- Select2-enhanced; one <option> per non-Filters section, by title
+#titlebar_right
+  div.action_items
+    span#prism-titlebar-actions-row.prism-titlebar-actions-row
+      span.prism-sidebar-panel-select-wrapper
+        select.prism-sidebar-panel-select   <- Select2-enhanced; one <option> per non-Filters section, by title
+      span.prism-action-items-dropdown      <- see below; may or may not be present on the same page
 ```
 
-Selecting an option opens that section and closes every other non-Filters
-one — Filters itself is excluded entirely and never appears in this
-dropdown's options. Each non-Filters section's own `> h3` (above) is
-hidden via CSS while collapsed in this mode
-(`#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open):not(#filters_sidebar_section) > h3`) —
-the dropdown is the only way to open one of those, though a section's own
-header still works to close it again once open. Filters' own `> h3` is
-never hidden by this rule, regardless.
+Selecting an option opens that section (in `#sidebar`, same as ever) and
+closes every other non-Filters one — Filters itself is excluded entirely
+and never appears in this dropdown's options.
 
 ### Consolidated action items markup (`.prism-action-items-dropdown`)
 
 Only present once `action_item` count exceeds
 `config.action_items_dropdown_threshold` (see
-[Consolidated action items](#consolidated-action-items)):
+[Consolidated action items](#consolidated-action-items)); shares
+`#prism-titlebar-actions-row` above with the "More Actions" dropdown when
+both exist on the same page (whichever one exists lands in that shared
+row on its own otherwise):
 
 ```
-#titlebar_right[data-prism-action-items-threshold]
+#titlebar_right
   div.action_items
-    span.prism-action-items-dropdown
-      select.prism-action-items-select      <- Select2-enhanced; one <option> per action_item, by its link/button text
-      div.prism-action-items-holding[hidden]
-        span.action_item                    <- every original action_item element, moved here as-is, never shown
-          a / form                          <- whatever a host's own action_item block rendered, untouched
+    span#prism-titlebar-actions-row.prism-titlebar-actions-row
+      span.prism-action-items-dropdown
+        select.prism-action-items-select      <- Select2-enhanced; one <option> per action_item, by its link/button text
+        div.prism-action-items-holding[hidden]
+          span.action_item                    <- every original action_item element, moved here as-is, never shown
+            a / form                          <- whatever a host's own action_item block rendered, untouched
 ```
 
 Selecting an option finds the real `<a>`/`<button>`/`<input type=submit>`
 inside the matching `.action_item` in `.prism-action-items-holding` and
 `.click()`s it directly, then resets the select back to its placeholder.
+The whole `#prism-titlebar-actions-row` (not each dropdown individually)
+is what a separate script in `prism.js` aligns to the index table's own
+right edge — see [Consolidated action items](#consolidated-action-items)
+for why.
 
 ### Active filters bar (`#prism_active_filters_bar`)
 

@@ -62,13 +62,6 @@
 // (structure/_main_structure.scss), so matching that path (rather than a
 // flatter selector) is what lets this reliably win regardless of load order.
 $prism-filters-collapsed-gutter: 72px !default;
-// Wider variant for #sidebar.prism-sidebar-multi-panel (js-src/prism.js
-// adds this class once there's more than one collapsible section) — a
-// bare 72px icon gutter has no room for the consolidated Select2 "jump to
-// a panel" dropdown + label that replaces individually-stacked icon
-// buttons in that case; see the ".prism-sidebar-panel-select-wrapper"
-// rules below.
-$prism-sidebar-panel-select-gutter: 220px !default;
 
 #active_admin_content #main_content_wrapper #main_content,
 #active_admin_content #sidebar {
@@ -84,15 +77,6 @@ body:has(.prism-collapsible-panel):not(:has(.prism-collapsible-panel.open)) {
   #active_admin_content #sidebar {
     width: $prism-filters-collapsed-gutter;
     margin-left: -#{$prism-filters-collapsed-gutter};
-  }
-
-  #active_admin_content #sidebar.prism-sidebar-multi-panel {
-    width: $prism-sidebar-panel-select-gutter;
-    margin-left: -#{$prism-sidebar-panel-select-gutter};
-  }
-
-  &:has(#sidebar.prism-sidebar-multi-panel) #active_admin_content:not(.without_sidebar) #main_content_wrapper #main_content {
-    margin-right: $prism-sidebar-panel-select-gutter;
   }
 }
 
@@ -223,44 +207,16 @@ body:has(.prism-collapsible-panel):not(:has(.prism-collapsible-panel.open)) {
   }
 }
 
-// Consolidated "More Actions" control — js-src/prism.js only builds this
-// (and only adds "prism-sidebar-multi-panel" to #sidebar) once there's at
-// least one collapsible section *besides* Filters, which is deliberately
-// excluded and always keeps its own plain icon button (see the
-// ":not(#filters_sidebar_section)" below), whether or not this dropdown
-// exists. Reuses this theme's own Select2 reskin (scss-src/_select2.scss)
-// wholesale for the widget itself — only the wrapper/label around it are
-// new here.
-.prism-sidebar-panel-select-wrapper {
-  flex: 0 0 auto;
-  padding: 16px 12px;
-  border-bottom: 1px solid $prism-border-color;
-
-  .select2-container {
-    width: 100% !important;
-  }
-}
-
-.prism-sidebar-panel-select-label {
-  display: block;
-  margin-bottom: 8px;
-  color: $prism-text-muted;
-  font-size: 0.72em;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-// Once the consolidated dropdown above exists, each of the *other*
-// section's own collapsed-state icon buttons are redundant — the dropdown
-// is the only way to open one of those. Filters is excluded here (kept
-// intact): it never joins this dropdown, so its own icon button always
-// stays visible regardless. A section's own full header still shows
-// normally the moment it *is* open, same as ever, so it can still be
-// closed by clicking it directly.
-#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open):not(#filters_sidebar_section) > h3 {
-  display: none;
-}
+// The consolidated "Sidebar Actions" dropdown itself
+// (.prism-sidebar-panel-select-wrapper + .prism-sidebar-panel-holding)
+// lives in scss-src/_buttons.scss, next to .prism-action-items-dropdown —
+// both render in the title bar's shared row (js-src/prism.js's
+// prismTitlebarActionsRow), not here in #sidebar at all. Filters is
+// excluded from this dropdown entirely and keeps living here, unchanged,
+// with its own plain icon button — every *other* collapsible section has
+// its links flattened into that dropdown and the section itself discarded
+// outright (see buildOtherSectionsDropdown in that file), so #sidebar
+// never has to make room for more than Filters alone.
 
 // Backstop for ActiveAdminPrism::Configuration#collapsible_filters =
 // false: always show the full panel, matching ActiveAdmin's own default

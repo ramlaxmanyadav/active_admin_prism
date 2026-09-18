@@ -43,6 +43,27 @@ module ActiveAdminPrism
       info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.1" fill="currentColor" stroke-width="2.5"/>'
     }.freeze
 
+    # Candidates for ActiveAdminPrism::Configuration#auto_nav_icons — a
+    # generic-enough subset of ICONS above that any of them reads as
+    # plausible next to an arbitrary menu label (excludes chevron_down,
+    # check/x, the alert/info trio and logout: purpose-specific shapes
+    # that would look wrong or actively misleading picked at random for,
+    # say, a "Reports" link).
+    NAV_ICON_POOL = %i[
+      dashboard users cart box receipt credit_card message settings
+      home list folder bell search globe eye pencil filter
+    ].freeze
+
+    # Deterministic, not actually random — the same `label` always maps
+    # to the same icon (a simple sum-of-bytes hash, stable across
+    # processes/restarts unlike Ruby's own salted String#hash), so a
+    # nav item's auto-picked icon doesn't visibly shuffle between page
+    # loads. See lib/active_admin/views/prism_sidebar.rb#icon_for, the
+    # only caller.
+    def self.auto_nav_icon_name(label)
+      NAV_ICON_POOL[label.to_s.each_byte.sum % NAV_ICON_POOL.length]
+    end
+
     # Returns an inline <svg>...</svg> string for `name`, or nil if unknown.
     def self.svg(name, css_class: "prism-icon", size: 18)
       inner = ICONS[name.to_sym]
