@@ -223,11 +223,12 @@ body:has(.prism-collapsible-panel):not(:has(.prism-collapsible-panel.open)) {
   }
 }
 
-// Consolidated "jump to a panel" control — js-src/prism.js only builds
-// this (and only adds "prism-sidebar-multi-panel" to #sidebar) once there
-// are 2+ collapsible sections; a single one (just "Filters", the common
-// case) keeps its own plain icon button exactly as before, no dropdown.
-// Reuses this theme's own Select2 reskin (scss-src/_select2.scss)
+// Consolidated "More Actions" control — js-src/prism.js only builds this
+// (and only adds "prism-sidebar-multi-panel" to #sidebar) once there's at
+// least one collapsible section *besides* Filters, which is deliberately
+// excluded and always keeps its own plain icon button (see the
+// ":not(#filters_sidebar_section)" below), whether or not this dropdown
+// exists. Reuses this theme's own Select2 reskin (scss-src/_select2.scss)
 // wholesale for the widget itself — only the wrapper/label around it are
 // new here.
 .prism-sidebar-panel-select-wrapper {
@@ -250,13 +251,14 @@ body:has(.prism-collapsible-panel):not(:has(.prism-collapsible-panel.open)) {
   text-transform: uppercase;
 }
 
-// Once the consolidated dropdown above exists, each section's own
-// collapsed-state icon button is redundant (and there isn't room for a
-// stack of them in the narrower 72px gutter this used to assume) — the
-// dropdown is the only way to open one. A section's own full header still
-// shows normally the moment it *is* open, same as ever, so it can still
-// be closed by clicking it directly.
-#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open) > h3 {
+// Once the consolidated dropdown above exists, each of the *other*
+// section's own collapsed-state icon buttons are redundant — the dropdown
+// is the only way to open one of those. Filters is excluded here (kept
+// intact): it never joins this dropdown, so its own icon button always
+// stays visible regardless. A section's own full header still shows
+// normally the moment it *is* open, same as ever, so it can still be
+// closed by clicking it directly.
+#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open):not(#filters_sidebar_section) > h3 {
   display: none;
 }
 

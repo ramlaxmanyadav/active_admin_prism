@@ -630,31 +630,33 @@ jquery-rails/jquery-ujs. Turn off with `config.styled_confirms = false`.
 The "Filters" panel (ActiveAdmin's `filters_sidebar_section`) starts
 collapsed to a single filter-icon button; clicking it expands the full form
 in place (also keyboard-accessible — Enter/Space toggle it, and it exposes
-`aria-expanded`). Every *other* sidebar section gets the exact same
-treatment too — dashboard panels, ActiveAdmin's own "Search status"
-panel (when `active_filters_bar` is off), and any custom
-`sidebar "Title" do ... end` block a host registers — each collapsing to
-its own icon button independently. Pass your own icon via
-`sidebar "More Actions", icon: :list do ... end` (any name from
-`lib/prism_icons.rb`); anything else falls back to a generic one (`:filter`
+`aria-expanded`). This is always how Filters behaves, whether or not any
+other collapsible sections exist — it's never grouped into a dropdown
+with anything else.
+
+Every *other* sidebar section — dashboard panels, ActiveAdmin's own
+"Search status" panel (when `active_filters_bar` is off), or any custom
+`sidebar "Title" do ... end` block a host registers — gets collapsed too,
+but consolidated into a single "More Actions" Select2 dropdown instead of
+each getting its own individually collapsed icon button: a stack of those
+has nowhere near enough room in the 72px gutter that assumes just one
+(Filters). Picking an option from it opens that section (closing every
+other non-Filters one — one visible at a time) and reflows the table just
+like Filters opening does. A section's own header still opens/closes it
+directly too, keeping the dropdown in sync either way. A page with no
+sections besides Filters (the common case) shows no dropdown at all —
+just the one familiar icon button.
+
+Pass your own icon via `sidebar "More Actions", icon: :list do ... end`
+(any name from `lib/prism_icons.rb`) — it's only used on a section's own
+header once it's open, since the collapsed dropdown itself doesn't render
+per-section icons; anything else falls back to a generic one (`:filter`
 for the Filters section specifically, `:list` otherwise). The index
 table/main content area reflows to reclaim the freed-up width while
 *every* section is collapsed, giving it back the moment any one of them
 opens. Turn it off with `config.collapsible_filters = false` to always
 show every section fully expanded, matching ActiveAdmin's own default
 (and the table/content area at its normal, non-reflowing width).
-
-Once there are **two or more** collapsible sections on the same page (say,
-Filters plus a custom "More Actions" block), a stack of individually
-collapsed icon buttons has nowhere near enough room in the 72px gutter
-that assumes just one — so instead, a single labeled Select2 dropdown
-("Panels") renders at the top of the sidebar, listing every section by
-its own title; picking one opens it (and closes every other section —
-one panel visible at a time) and reflows the table just like before.
-A section's own header still opens/closes it directly too, keeping the
-dropdown in sync either way. A page with just the one Filters section
-(the common case) is completely unaffected — its own plain icon button
-keeps working exactly as it always has, no dropdown involved.
 
 The reflow relies on the CSS `:has()` selector (broadly supported in
 current browsers); without it, sections still collapse/expand correctly,
@@ -664,9 +666,13 @@ the reflow just won't reclaim the extra width.
 
 A title bar with more than `action_items_dropdown_threshold` (default:
 `3`) `action_item` buttons collapses all of them into a single Select2
-"jump menu" instead of a multi-row wall of individual buttons — a
-resource registering a dozen+ CSV upload / bulk-action links is a real
-example this was built for. Picking an option fires that action
+"jump menu", aligned with the index table's own right edge, instead of a
+multi-row wall of individual buttons — a resource registering a dozen+
+CSV upload / bulk-action links is a real example this was built for.
+(The table's own edge, not the page's: a table's column-driven width
+often doesn't reach the page's full content width, so aligning to the
+container instead would leave the dropdown looking stranded out past
+the table it belongs to.) Picking an option fires that action
 immediately (a plain `link_to` navigates, a `button_to` form submits —
 whatever it actually was, including its own `data-confirm`/`data-method`)
 and the dropdown resets right back to its placeholder, ready for the next
@@ -1107,21 +1113,26 @@ instead — see [Collapsible "Filters" sidebar](#collapsible-filters-sidebar).
 With the config `false`, `body.prism-filters-collapsible-disabled` is the
 backstop class that forces every section back to always-expanded.
 
-With two or more collapsible sections, `prism.js` also adds this instead,
-as the first child of `#sidebar`:
+With at least one collapsible section besides Filters, `prism.js` also
+inserts this — right before where the first non-Filters section's own
+markup above would otherwise sit, not at the very top of `#sidebar` (which
+would visually queue it ahead of Filters):
 
 ```
 #sidebar.prism-sidebar-multi-panel
   .prism-sidebar-panel-select-wrapper
-    span.prism-sidebar-panel-select-label   <- "Panels"
-    select.prism-sidebar-panel-select       <- Select2-enhanced; one <option> per section, by title
+    span.prism-sidebar-panel-select-label   <- "More Actions"
+    select.prism-sidebar-panel-select       <- Select2-enhanced; one <option> per non-Filters section, by title
 ```
 
-Selecting an option opens that section and closes every other one; each
-section's own `> h3` (above) is hidden via CSS while collapsed in this
-mode (`#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open) > h3`) —
-the dropdown is the only way to open one, though a section's own header
-still works to close it again once open.
+Selecting an option opens that section and closes every other non-Filters
+one — Filters itself is excluded entirely and never appears in this
+dropdown's options. Each non-Filters section's own `> h3` (above) is
+hidden via CSS while collapsed in this mode
+(`#sidebar.prism-sidebar-multi-panel .prism-collapsible-panel:not(.open):not(#filters_sidebar_section) > h3`) —
+the dropdown is the only way to open one of those, though a section's own
+header still works to close it again once open. Filters' own `> h3` is
+never hidden by this rule, regardless.
 
 ### Consolidated action items markup (`.prism-action-items-dropdown`)
 

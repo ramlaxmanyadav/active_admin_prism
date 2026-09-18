@@ -406,17 +406,17 @@
     return toggle;
   }
 
-  // Once there are 2+ collapsible sections, a stack of individually
-  // collapsed icon buttons has nowhere near enough room in the 72px
-  // gutter that assumes just one (Filters). Consolidates them instead
-  // into a single labeled Select2 "jump to a panel" dropdown at the top
-  // of #sidebar — picking one opens it and closes every other section
-  // (single panel visible at a time); a section's own header still opens/
-  // closes it directly too, syncing the dropdown's value either way. A
-  // single collapsible section (just Filters, the common case) is
-  // untouched — its own plain icon button keeps working exactly as
-  // before, no dropdown involved at all.
-  function buildPanelSelect(sidebar, sections) {
+  // Every OTHER collapsible section — anything besides Filters, e.g. a
+  // host's own custom `sidebar "..." do ... end` block — gets consolidated
+  // into a single "More Actions"-labeled Select2 dropdown instead of each
+  // rendering its own individually collapsed icon button; picking one
+  // opens it and closes every other non-Filters section (a section's own
+  // header still opens/closes it directly too, syncing the dropdown's
+  // value either way). Filters is deliberately excluded from this and
+  // always keeps its own plain icon button exactly as before, whether or
+  // not any other sections exist — see ActiveAdminPrism::Configuration
+  // #collapsible_filters.
+  function buildOtherSectionsDropdown(sidebar, entries) {
     if (typeof jQuery === "undefined" || !jQuery.fn.select2) return;
 
     sidebar.classList.add("prism-sidebar-multi-panel");
@@ -426,7 +426,7 @@
 
     var label = document.createElement("span");
     label.className = "prism-sidebar-panel-select-label";
-    label.textContent = "Panels";
+    label.textContent = "More Actions";
     label.id = "prism-sidebar-panel-select-label";
 
     var select = document.createElement("select");
@@ -439,7 +439,7 @@
     select.appendChild(document.createElement("option"));
 
     var openIndex = -1;
-    sections.forEach(function (entry, index) {
+    entries.forEach(function (entry, index) {
       var option = document.createElement("option");
       option.value = String(index);
       option.textContent = entry.section.getAttribute("data-prism-panel-title") || "Panel " + (index + 1);
@@ -449,11 +449,14 @@
 
     wrapper.appendChild(label);
     wrapper.appendChild(select);
-    sidebar.insertBefore(wrapper, sidebar.firstChild);
+    // Placed right where the first non-Filters section would otherwise
+    // have rendered its own icon button — not forced to the very top of
+    // #sidebar, which would visually queue it ahead of Filters.
+    sidebar.insertBefore(wrapper, entries[0].section);
 
     var $select = jQuery(select).select2({
       width: "100%",
-      placeholder: "Select a panel",
+      placeholder: "Select an action",
       allowClear: true,
       minimumResultsForSearch: 6
     });
@@ -462,25 +465,24 @@
 
     $select.on("select2:select", function (event) {
       var index = parseInt(event.params.data.id, 10);
-      sections.forEach(function (entry, i) {
+      entries.forEach(function (entry, i) {
         setOpen(entry.section, entry.toggle, i === index);
       });
     });
 
     $select.on("select2:clear", function () {
-      sections.forEach(function (entry) {
+      entries.forEach(function (entry) {
         setOpen(entry.section, entry.toggle, false);
       });
     });
 
     // Keeps the dropdown in sync when a section is opened/closed some
-    // other way (its own header, or the active-filters-bar shortcut
-    // below) instead of through this dropdown.
+    // other way (its own header) instead of through this dropdown.
     onOpenChange = function () {
-      var current = sections.filter(function (entry) {
+      var current = entries.filter(function (entry) {
         return entry.section.classList.contains("open");
       })[0];
-      var index = current ? String(sections.indexOf(current)) : "";
+      var index = current ? String(entries.indexOf(current)) : "";
       if ($select.val() !== index) $select.val(index).trigger("change");
     };
   }
@@ -491,23 +493,27 @@
     var sidebar = document.getElementById("sidebar");
     var filtersSection = document.getElementById("filters_sidebar_section");
     var filtersToggle = null;
-    var sections = [];
+    var otherEntries = [];
 
     document.querySelectorAll(".prism-collapsible-panel").forEach(function (section) {
       var toggle = wireUp(section);
       if (!toggle) return;
-      if (section === filtersSection) filtersToggle = toggle;
+
+      if (section === filtersSection) {
+        filtersToggle = toggle;
+        return;
+      }
 
       var titleEl = toggle.querySelector(".prism-filter-label");
       section.setAttribute("data-prism-panel-title", titleEl ? titleEl.textContent : section.id);
-      sections.push({ section: section, toggle: toggle });
+      otherEntries.push({ section: section, toggle: toggle });
     });
 
     if (filtersSection) {
       document.body.classList.toggle("prism-filters-open", filtersSection.classList.contains("open"));
     }
 
-    if (sidebar && sections.length > 1) buildPanelSelect(sidebar, sections);
+    if (sidebar && otherEntries.length > 0) buildOtherSectionsDropdown(sidebar, otherEntries);
 
     // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
     // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
@@ -697,5 +703,53 @@
       // stay "set" to.
       $select.val("").trigger("change");
     });
+
+    // Aligns the dropdown's right edge with the index table's own right
+    // edge instead of #title_bar's (a table's columns don't necessarily
+    // stretch to fill the full content width, so those two edges often
+    // don't line up — and #title_bar itself spans wider than the table's
+    // own container to begin with, since it sits above the #main_content/
+    // #sidebar split rather than inside it). `transform: translateX`
+    // shifts it left from wherever it already renders in normal flow —
+    // deliberately not `position: absolute/fixed`, which would need a
+    // containing block that actually shares the table's right edge, and
+    // none of this element's ancestors do. Staying in normal flow (just
+    // visually shifted) is also what keeps it aligned with the top of
+    // #title_bar for free, reading as a top-level menu rather than
+    // something floating at an offset.
+    var table = document.querySelector("#main_content table");
+
+    function alignToTable() {
+      if (!table) return;
+      wrapper.style.transform = "none";
+      var wrapperRect = wrapper.getBoundingClientRect();
+      var tableRect = table.getBoundingClientRect();
+      if (!tableRect.width || !wrapperRect.width) return;
+
+      var shift = wrapperRect.right - tableRect.right;
+      wrapper.style.transform = shift > 0 ? "translateX(-" + shift + "px)" : "none";
+    }
+
+    // Run once immediately, but layout isn't necessarily final yet at
+    // DOMContentLoaded — a scrollbar appearing/disappearing, webfonts, or
+    // anything else nudging the table's own width afterward all happen
+    // without the *window* itself ever resizing, so plain "resize"/"load"
+    // listeners can miss them (observed in practice: the table shrank by
+    // ~40px sometime after both had already fired). A ResizeObserver on
+    // the table itself sidesteps guessing which event actually catches
+    // it — it re-runs on any future width change, from any cause,
+    // including ones years from now this comment didn't anticipate.
+    alignToTable();
+
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(alignToTable).observe(table);
+    } else {
+      window.addEventListener("load", alignToTable);
+      var resizeTimer = null;
+      window.addEventListener("resize", function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(alignToTable, 150);
+      });
+    }
   });
 })();

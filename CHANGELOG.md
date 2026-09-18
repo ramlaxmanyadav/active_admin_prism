@@ -2,30 +2,25 @@
 
 ## 0.1.4
 
-- Every sidebar section now collapses to a single icon button when
-  `collapsible_filters` is on — not just the "Filters" panel, which is
-  all this used to do. A host's own custom `sidebar "Title" do ... end`
-  block (or ActiveAdmin core's own "Search status" panel, when
-  `active_filters_bar` is turned off) used to keep rendering at its full
-  width/height even while `#sidebar` itself squeezed down to a 72px icon
-  gutter — wrapping every word onto its own line, or spilling out
-  unclipped over the main content, instead of collapsing cleanly
-  alongside Filters. Pass `icon:` to the `sidebar` DSL
-  (`sidebar "More Actions", icon: :list do ... end`) to pick from any icon
-  in `lib/prism_icons.rb`; anything else falls back to a generic one.
-  `#sidebar` itself now only squeezes while *every* section agrees to
-  stay collapsed, reflowing back to full width the moment any one of them
-  opens. With two or more collapsible sections, a stack of individually
-  collapsed icon buttons has nowhere near enough room in the 72px gutter
-  that assumes just one — so instead, a single labeled Select2 dropdown
-  ("Panels") renders at the top of the sidebar; picking one opens it
-  (closing every other section) and reflows the table the same as before.
-  A page with just the one Filters section (the common case) is
-  completely unaffected — its own plain icon button keeps working exactly
-  as it always has.
+- Every non-Filters sidebar section (ActiveAdmin core's own "Search
+  status" panel, when `active_filters_bar` is off, or a host's own custom
+  `sidebar "Title" do ... end` block) now collapses into a single, labeled
+  "More Actions" Select2 dropdown when `collapsible_filters` is on,
+  instead of each rendering its own individually collapsed icon button
+  with nowhere near enough room in the 72px gutter that assumed just one —
+  wrapping every word onto its own line, or spilling out unclipped over
+  the main content, instead of collapsing cleanly. Picking an option
+  opens that section (closing every other one) and reflows the table the
+  same as before; a section's own header still opens/closes it directly
+  too, keeping the dropdown in sync either way. The Filters panel itself
+  is untouched by any of this — it always keeps its own plain icon button
+  exactly as before, whether or not any other sections exist. A page with
+  only Filters (the common case) shows no dropdown at all.
 - A title bar with more than `action_items_dropdown_threshold` (default:
   3) `action_item` buttons now collapses all of them into a single
-  Select2 "jump menu" instead of rendering a multi-row wall of individual
+  Select2 "jump menu", aligned with the index table's own right edge
+  (not the page's corner, which a table's own column-driven width often
+  doesn't reach), instead of rendering a multi-row wall of individual
   buttons — a resource registering a dozen+ CSV upload / bulk-action
   links is a real example this was built for. Picking an option fires
   that action immediately (a plain link navigates, a `button_to` form
