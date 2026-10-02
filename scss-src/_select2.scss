@@ -217,7 +217,21 @@ form.filter_form .filter_form_field.select_and_search .select2-container {
 // so that inline 100% is never auto and the BFC sizing never kicks in —
 // the container renders full-width *underneath* the floated label instead
 // of beside it. `!important` is required here to beat that inline style.
-form fieldset.inputs li.select > .select2-container {
+//
+// Matches ANY field wrapper containing a Select2-enhanced select, not
+// specifically `as: :select` — Formtastic's own wrapper_classes derives
+// the <li>'s class from the literal `as:` symbol used
+// (Inputs::Base::Wrapping#wrapper_classes: `classes << as`), so
+// `as: :select2`/`:select2_multiple`, a third-party gem's own
+// `:searchable_select`, or any other custom select2-rendering input type
+// a host registers each get their own distinct <li> class — an
+// open-ended, ever-growing list no selector enumerating specific `as:`
+// names ahead of time could ever fully keep up with. Every one of them
+// is itself a Formtastic::Inputs::SelectInput subclass rendering the
+// exact same underlying <select>/.select2-container Select2 replaces, so
+// matching on *that* structure instead of the wrapper's own class name is
+// what actually generalizes here.
+form fieldset.inputs li > .select2-container {
   display: inline-block;
   width: calc(80% - 22px) !important;
   vertical-align: middle;
@@ -227,7 +241,7 @@ form fieldset.inputs li.select > .select2-container {
 // 1px offscreen technique once active, so this only matches before that,
 // or if it's disabled/skipped entirely — needs the same geometry so the
 // row doesn't jump once Select2 does attach.
-form fieldset.inputs li.select > select:not(.select2-hidden-accessible) {
+form fieldset.inputs li > select:not(.select2-hidden-accessible) {
   display: inline-block;
   width: calc(80% - 22px);
   vertical-align: middle;

@@ -72,6 +72,28 @@
     restoreGroupState(sidebar);
     sidebar.addEventListener("click", onToggleClick);
     sidebar.addEventListener("click", onSidebarButtonClick);
+
+    // Scrolls the currently active nav item into view instead of leaving
+    // a long "Pages" list scrolled to the top, however far down the
+    // active page happens to be. Runs after restoreGroupState just above,
+    // so a group whose stored state is "open" has already had that class
+    // applied — scrolling first would target the item's position from
+    // before that, which collapsed-by-default groups can move.
+    var scroll = sidebar.querySelector(".prism-sidebar-scroll");
+    if (scroll) {
+      // A group containing the active leaf is marked ".active" too (see
+      // lib/active_admin/views/prism_sidebar.rb#render_item), so this can
+      // match more than one element — the leaf itself, being the most
+      // deeply nested, is always the last one in document order.
+      var activeItems = scroll.querySelectorAll(".prism-nav-item.active");
+      var activeItem = activeItems[activeItems.length - 1];
+      // No offsetParent means it's inside a still-collapsed group (open
+      // only persists via localStorage — a first-time visitor or one who
+      // last left it closed has nothing here to scroll to).
+      if (activeItem && activeItem.offsetParent) {
+        activeItem.scrollIntoView({ block: "center", behavior: "auto" });
+      }
+    }
   });
 })();
 
@@ -370,6 +392,24 @@
   });
 })();
 
+// Also shared by both "consolidated ... dropdown" features below — the
+// label for a moved link/button's own <option> in the jump menu. A plain
+// link has no `.value`, so this is almost always `.textContent`, except
+// for one real pattern seen in production: an icon-only action
+// (`link_to(path, title: "...") { raw("<i class=...>") }`, no visible
+// text at all, just a tooltip) renders `.textContent` as "" — without
+// falling back to `title`/`aria-label` there, its dropdown row would show
+// no label at all instead of silently failing some other way.
+function prismTriggerLabel(trigger) {
+  if (!trigger) return "";
+
+  var label = trigger.value || trigger.textContent;
+  label = (label || "").trim();
+  if (label) return label;
+
+  return (trigger.getAttribute("title") || trigger.getAttribute("aria-label") || "").trim();
+}
+
 // Shared by the "consolidated sidebar panels" (below) and "consolidated
 // action items" (further down) features — both are independent top-level
 // IIFEs, so this is their one shared meeting point rather than a closure:
@@ -510,7 +550,7 @@ function prismTitlebarActionsRow() {
       if (contents) {
         Array.prototype.forEach.call(contents.querySelectorAll("a, button, input[type=submit]"), function (trigger) {
           trigger.dataset.prismSidebarActionsIndex = String(labels.length);
-          labels.push((trigger.value || trigger.textContent || "").trim());
+          labels.push(prismTriggerLabel(trigger));
         });
         holding.appendChild(contents);
       }
@@ -589,6 +629,21 @@ function prismTitlebarActionsRow() {
     }
 
     if (otherEntries.length > 0) buildOtherSectionsDropdown(otherEntries);
+
+    // Every section found above besides Filters gets discarded outright
+    // (buildOtherSectionsDropdown does the actual removing) — on a page
+    // with no Filters panel at all (any non-index page, or
+    // #collapsible_filters off) and at least one other section, #sidebar
+    // can end up completely empty. ActiveAdmin's own ".without_sidebar"
+    // class (which its own CSS already reflows #main_content to fill) is
+    // only ever added server-side, before any of this runs, so an empty
+    // #sidebar here would otherwise still reserve its usual column width
+    // with nothing left inside it.
+    var sidebar = document.getElementById("sidebar");
+    var mainContent = document.getElementById("active_admin_content");
+    if (sidebar && mainContent && sidebar.children.length === 0) {
+      mainContent.classList.add("without_sidebar");
+    }
 
     // The active-filters bar (see lib/active_admin/views/active_filters_bar.rb,
     // ActiveAdminPrism::Configuration#active_filters_bar) is a shortcut
@@ -770,11 +825,11 @@ function prismTitlebarActionsRow() {
 
     items.forEach(function (item, index) {
       var trigger = item.querySelector("a, button, input[type=submit]");
-      var label = trigger ? (trigger.value || trigger.textContent) : item.textContent;
+      var label = trigger ? prismTriggerLabel(trigger) : (item.textContent || "").trim();
 
       var option = document.createElement("option");
       option.value = String(index);
-      option.textContent = (label || "").trim();
+      option.textContent = label;
       select.appendChild(option);
 
       item.dataset.prismActionItemsIndex = String(index);
@@ -907,9 +962,42 @@ function prismTitlebarActionsRow() {
 
   function wire(el) {
     updateShadows(el);
+
+    // Tracks whether this table was sitting flush against an edge right
+    // before anything (a scroll, then later a resize) last touched it —
+    // see handleResize below for why a resize specifically needs this
+    // remembered rather than just re-measured on the spot.
+    var pinnedEdge = null; // "left" | "right" | null
+
     el.addEventListener("scroll", function () {
+      var maxScroll = el.scrollWidth - el.clientWidth;
+      if (el.scrollLeft <= 1) {
+        pinnedEdge = "left";
+      } else if (el.scrollLeft >= maxScroll - 1) {
+        pinnedEdge = "right";
+      } else {
+        pinnedEdge = null;
+      }
       updateShadows(el);
     });
+
+    function handleResize() {
+      // Opening/closing the Filters sidebar (or anything else resizing
+      // #main_content) changes el.clientWidth without the visitor having
+      // touched the table at all — the same scrollLeft that left it
+      // fully scrolled a moment ago can leave more hidden on whichever
+      // edge just grew, bringing back a shadow for content they'd
+      // already scrolled past. Re-pinning to whichever edge it was
+      // actually sitting at right before the resize (tracked by the
+      // scroll listener above) is what keeps the shadow matching what a
+      // visitor has actually seen, not just the raw pixel position.
+      if (pinnedEdge === "right") {
+        el.scrollLeft = el.scrollWidth - el.clientWidth;
+      } else if (pinnedEdge === "left") {
+        el.scrollLeft = 0;
+      }
+      updateShadows(el);
+    }
 
     // Same reasoning as alignToTable's own ResizeObserver above: the
     // table's width can settle after DOMContentLoaded (a scrollbar
@@ -919,24 +1007,37 @@ function prismTitlebarActionsRow() {
     // container (whose own box size is unaffected by its scrollable
     // content growing), is what actually catches that.
     if (typeof ResizeObserver !== "undefined") {
-      var observer = new ResizeObserver(function () {
-        updateShadows(el);
-      });
+      var observer = new ResizeObserver(handleResize);
       observer.observe(el);
       Array.prototype.forEach.call(el.children, function (child) {
         observer.observe(child);
       });
     } else {
-      window.addEventListener("load", function () {
-        updateShadows(el);
-      });
-      window.addEventListener("resize", function () {
-        updateShadows(el);
-      });
+      window.addEventListener("load", handleResize);
+      window.addEventListener("resize", handleResize);
     }
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".paginated_collection_contents > .index_content").forEach(wire);
+  });
+
+  // The "‹"/"›" hints themselves are pseudo-elements (scss-src/_tables.scss)
+  // with no DOM node of their own to attach a listener to — but a browser
+  // still reports a click landing on one with its *host* element as
+  // event.target (there's no other way to target a ::before/::after).
+  // event.target being ".index_content" itself, rather than some real
+  // cell/link inside it, can only mean a visible hint was clicked (its
+  // CSS restores pointer-events only while shown) — jump straight to that
+  // edge instead of leaving a visitor to drag-scroll a wide table by hand.
+  document.addEventListener("click", function (event) {
+    var content = event.target;
+    if (!content.classList || !content.classList.contains("index_content")) return;
+
+    if (content.classList.contains("prism-scroll-right")) {
+      content.scrollTo({ left: content.scrollWidth, behavior: "smooth" });
+    } else if (content.classList.contains("prism-scroll-left")) {
+      content.scrollTo({ left: 0, behavior: "smooth" });
+    }
   });
 })();

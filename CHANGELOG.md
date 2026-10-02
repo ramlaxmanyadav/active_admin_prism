@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.1.6
+
+Every item below was found in real production use (a real host app running
+0.1.5) and ported back into the gem so it's fixed for every user instead of
+needing a per-app override.
+
+- Fixed: the "Actions"/"Sidebar Actions" dropdowns built an option's label
+  from a link's `.value || .textContent` only — an icon-only action_item
+  (`link_to(path, title: "...") { ... }`, no visible text, just a tooltip)
+  rendered with a completely blank dropdown row. Now falls back to
+  `title`/`aria-label` when there's no text content at all.
+- Fixed: once the "Sidebar Actions" dropdown discards every non-Filters
+  sidebar section (js-src/prism.js), a page with no Filters panel either
+  (any non-index page, or `collapsible_filters` off) could be left with a
+  completely empty `#sidebar` that still reserved its usual column width —
+  ActiveAdmin's own `.without_sidebar` class (which already reflows
+  `#main_content` to fill that space) is only ever added server-side,
+  before this discarding runs. Added client-side once `#sidebar` ends up
+  empty.
+- The index table's scroll-shadow hints (`.index_content`'s "‹"/"›", see
+  0.1.5) are now clickable — jump straight to that edge instead of having
+  to drag-scroll a wide table by hand.
+- Fixed: resizing `.index_content` (e.g. opening/closing the Filters panel,
+  which changes `#main_content`'s width) recomputed the scroll-shadow hints
+  against whatever `scrollLeft` already was, without ever moving it — a
+  table already scrolled all the way to an edge could have the hint for
+  that edge reappear, purely because the same pixel `scrollLeft` now left
+  more of the table hidden than a moment earlier. Now re-pins to whichever
+  edge it was actually sitting at right before the resize.
+- The Pages nav now scrolls the currently active item into view on load,
+  instead of leaving a long menu scrolled to the top with the active page
+  buried somewhere below the fold.
+- Fixed: a Select2-enhanced filter/form field only got its label-alignment
+  CSS when its Formtastic wrapper `<li>` carried the literal class
+  `select`, i.e. only ever `as: :select` fields — any other select2-
+  rendering input type (`as: :select2`, `:select2_multiple`, a third-party
+  gem's own `:searchable_select`, or any other custom type a host
+  registers) got a different wrapper class and never matched, so its select2
+  control rendered unfloated, colliding with its still-floated label
+  instead of sitting beside it. Now matches any field wrapper containing a
+  Select2 control, not a specific `as:` type.
+- Fixed: a filter form's multi-control fields (`select_and_search`'s
+  predicate + value, `filter_date_range`'s from/to pair) always laid out
+  side by side on one line with no minimum width — a narrower-than-default
+  `$sidebar-width`, or a Select2-enhanced control whose own open dropdown
+  sizes itself from its current trigger width, could clip the text inside.
+  Each control now has a real minimum width and the pair wraps onto its own
+  line below that, instead of being forced narrower indefinitely.
+- Fixed: a `nested_fields_for`-style helper (cocoon, or a host's own
+  hand-rolled equivalent) wraps each repeated entry's own fields in an
+  intervening `<fieldset class="nested_fields">`, which ActiveAdmin core's
+  own label-floating rule (`ol > li label`) doesn't reach through — labels
+  inside such a fieldset rendered as bare inline text crammed against their
+  input instead of aligned like every other field in the form.
+- A row with many actions (the default View/Edit/Delete icons plus several
+  custom `member_action`s) now wraps onto a second line instead of
+  overflowing its column on one cramped, uneven line.
+
 ## 0.1.5
 
 - Fixed: a page with several `action_item` buttons could briefly flash

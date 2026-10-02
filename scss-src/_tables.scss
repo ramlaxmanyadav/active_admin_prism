@@ -104,6 +104,14 @@
   &.prism-scroll-left::before,
   &.prism-scroll-right::after {
     opacity: 1;
+    // `pointer-events: none` above is the right default for an invisible
+    // hint (never swallow a click meant for the real cell/link under it),
+    // but once actually shown it doubles as a "jump to that edge" button
+    // (js-src/prism.js's own click handler) — restoring it only here,
+    // scoped to the exact state that already makes it visible, keeps that
+    // click target from ever silently intercepting anything while hidden.
+    pointer-events: auto;
+    cursor: pointer;
   }
 }
 
@@ -187,7 +195,13 @@ table.index_table {
 .table_actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
+  // Only takes effect once wrapping actually happens (flex-wrap above) —
+  // a row with a dozen+ icon buttons (custom `member_action`s stack with
+  // the default View/Edit/Delete) would otherwise overflow its column on
+  // one cramped, uneven line instead of flowing onto a second.
+  row-gap: 6px;
 
   a {
     display: inline-flex;
