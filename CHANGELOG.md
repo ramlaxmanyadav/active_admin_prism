@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.7
+
+Found in real production use (a reddoorz admin form) and ported back into
+the gem so it's fixed for every host app instead of needing a per-app
+override.
+
+- Select2's own "clear all" control for a select/multi-select (the
+  AllowClear addon's bare "×", no visible label) was styled muted-gray at
+  rest with color only changing on `:hover` — effectively invisible next
+  to a value or a row of chips unless you already knew it was there and
+  went looking for it. Now danger-colored and sized up at rest, with a
+  permanent "Clear all" label, for both `.select2-selection--single` and
+  `.select2-selection--multiple`.
+
 ## 0.1.6
 
 Every item below was found in real production use (a real host app running

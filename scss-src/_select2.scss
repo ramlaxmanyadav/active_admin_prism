@@ -60,15 +60,30 @@
     cursor: not-allowed;
   }
 
+  // Select2's own clear-all control (select2.js's AllowClear addon) is a
+  // bare "×" with no visible label — easy to miss, especially once a
+  // select has a long value or a multi-select has several chips sitting
+  // right next to it (reported against a reddoorz admin form using this
+  // theme). Danger-colored and sized up at rest, not just on :hover, plus
+  // a permanent "Clear all" label — :hover alone only confirms what it
+  // does for someone who has already found it, which was the problem.
   .select2-selection__clear {
     position: static;
     margin: 0 4px 0 0;
     height: auto;
-    color: $prism-text-muted;
+    color: $prism-color-danger;
     font-weight: 700;
+    font-size: 1.2em;
+
+    &::after {
+      content: " Clear all";
+      font-size: 0.7em;
+      font-weight: 600;
+      vertical-align: middle;
+    }
 
     &:hover {
-      color: $prism-color-danger;
+      color: darken($prism-color-danger, 10%);
     }
   }
 
@@ -141,15 +156,25 @@
       }
     }
 
+    // See the single-select .select2-selection__clear rule above for why
+    // this is danger-colored and labeled at rest rather than only on hover.
     .select2-selection__clear {
       position: static;
       margin: 0 0 0 auto;
       height: auto;
-      color: $prism-text-muted;
+      color: $prism-color-danger;
       font-weight: 700;
+      font-size: 1.2em;
+
+      &::after {
+        content: " Clear all";
+        font-size: 0.7em;
+        font-weight: 600;
+        vertical-align: middle;
+      }
 
       &:hover {
-        color: $prism-color-danger;
+        color: darken($prism-color-danger, 10%);
       }
     }
 
